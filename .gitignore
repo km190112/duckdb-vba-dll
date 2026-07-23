@@ -1,6 +1,9 @@
 # Rust のビルド成果物。DuckDB を静的リンクするため 20GB 超になる。
 /target/
 
+# package_release.ps1 が作る配布用 zip
+/dist/
+
 # ビルドした DLL は Releases で配布する（リポジトリには入れない）
 *.dll
 *.pdb
