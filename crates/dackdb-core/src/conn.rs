@@ -57,7 +57,9 @@ fn registry() -> &'static Mutex<HashMap<i64, ConnState>> {
 /// クエリ実行中の panic でこのマップ自体が壊れることはない。よって
 /// poisoning を無視して中身を取り出すのが正しい。
 fn lock_registry() -> std::sync::MutexGuard<'static, HashMap<i64, ConnState>> {
-    registry().lock().unwrap_or_else(|poisoned| poisoned.into_inner())
+    registry()
+        .lock()
+        .unwrap_or_else(|poisoned| poisoned.into_inner())
 }
 
 /// 0 は「無効なハンドル」を表すので 1 から始める。
@@ -83,7 +85,11 @@ fn build_config(level: Level, opts: OpenOptions) -> Result<Config, String> {
             c.set("access_mode", "READ_WRITE")?;
             c.set(
                 "enable_external_access",
-                if opts.allow_external_access { "true" } else { "false" },
+                if opts.allow_external_access {
+                    "true"
+                } else {
+                    "false"
+                },
             )?;
         }
     }
@@ -112,7 +118,7 @@ pub fn open(level: Level, path: &str, opts: OpenOptions) -> Result<i64, String> 
     let path = path.trim();
     if path.is_empty() {
         return Err(
-            "データベースのパスが空です。dack.db のフルパスを指定してください。".to_string()
+            "データベースのパスが空です。dack.db のフルパスを指定してください。".to_string(),
         );
     }
 
@@ -130,7 +136,12 @@ pub fn open(level: Level, path: &str, opts: OpenOptions) -> Result<i64, String> 
     let conn = db.connect()?;
 
     let handle = NEXT_HANDLE.fetch_add(1, Ordering::SeqCst);
-    let state = ConnState { conn, db, level, path: path.to_string() };
+    let state = ConnState {
+        conn,
+        db,
+        level,
+        path: path.to_string(),
+    };
 
     lock_registry().insert(handle, state);
 
@@ -186,8 +197,12 @@ mod tests {
     fn seed(path: &str) -> i64 {
         let h = open(Level::Admin, path, OpenOptions::default()).expect("管理者で作成できるはず");
         with_conn(h, |s| {
-            s.conn.query("CREATE TABLE 売上 (id INTEGER, 部署 VARCHAR, 金額 BIGINT)").unwrap();
-            s.conn.query("INSERT INTO 売上 VALUES (1, '営業部', 1000), (2, '技術部', 2000)").unwrap();
+            s.conn
+                .query("CREATE TABLE 売上 (id INTEGER, 部署 VARCHAR, 金額 BIGINT)")
+                .unwrap();
+            s.conn
+                .query("INSERT INTO 売上 VALUES (1, '営業部', 1000), (2, '技術部', 2000)")
+                .unwrap();
         })
         .unwrap();
         h
@@ -204,14 +219,20 @@ mod tests {
         with_conn(h, |s| {
             // 層1（エンジン）だけで書き込みが拒否されることを確認する。
             // ここでは classify（層2）を通していないことが重要。
-            let err = s.conn.query("INSERT INTO 売上 VALUES (3, '経理部', 3000)").unwrap_err();
+            let err = s
+                .conn
+                .query("INSERT INTO 売上 VALUES (3, '経理部', 3000)")
+                .unwrap_err();
             assert!(
                 err.contains("read-only") || err.contains("read only"),
                 "エンジンが READ_ONLY を強制していない: {err}"
             );
 
             let err = s.conn.query("CREATE TABLE t2 (a INTEGER)").unwrap_err();
-            assert!(err.contains("read-only") || err.contains("read only"), "{err}");
+            assert!(
+                err.contains("read-only") || err.contains("read only"),
+                "{err}"
+            );
 
             // 参照はできる
             s.conn.query("SELECT * FROM 売上").unwrap();
@@ -233,8 +254,7 @@ mod tests {
         with_conn(h, |s| {
             // 昇格の試み。成功してはいけない。
             let escalated = s.conn.query("SET access_mode='READ_WRITE'").is_ok();
-            let still_readonly =
-                s.conn.query("INSERT INTO 売上 VALUES (9, 'x', 1)").is_err();
+            let still_readonly = s.conn.query("INSERT INTO 売上 VALUES (9, 'x', 1)").is_err();
             assert!(
                 !escalated || still_readonly,
                 "SET access_mode で読み書きに昇格できてしまった"
@@ -253,7 +273,9 @@ mod tests {
 
         let h = open(Level::ReadWrite, p, OpenOptions::default()).unwrap();
         with_conn(h, |s| {
-            s.conn.query("INSERT INTO 売上 VALUES (3, '経理部', 3000)").unwrap();
+            s.conn
+                .query("INSERT INTO 売上 VALUES (3, '経理部', 3000)")
+                .unwrap();
         })
         .unwrap();
         close(h).unwrap();
@@ -261,10 +283,17 @@ mod tests {
 
     #[test]
     fn read_level_reports_missing_file_clearly() {
-        let err = open(Level::Read, "C:/存在しないフォルダ/無い.db", OpenOptions::default())
-            .unwrap_err();
+        let err = open(
+            Level::Read,
+            "C:/存在しないフォルダ/無い.db",
+            OpenOptions::default(),
+        )
+        .unwrap_err();
         assert!(err.contains("見つかりません"), "{err}");
-        assert!(err.contains("dackdb_admin.dll"), "上位 DLL への案内が無い: {err}");
+        assert!(
+            err.contains("dackdb_admin.dll"),
+            "上位 DLL への案内が無い: {err}"
+        );
     }
 
     #[test]
@@ -278,7 +307,10 @@ mod tests {
         for h in [0i64, -1, i64::MAX, i64::MIN, 999_999] {
             let r = with_conn(h, |_| ());
             assert!(r.is_err(), "ハンドル {h} がエラーにならなかった");
-            assert!(close(h).is_err(), "ハンドル {h} の close がエラーにならなかった");
+            assert!(
+                close(h).is_err(),
+                "ハンドル {h} の close がエラーにならなかった"
+            );
         }
     }
 
@@ -301,7 +333,10 @@ mod tests {
         let h = open(Level::ReadWrite, p, OpenOptions::default()).unwrap();
         with_conn(h, |s| {
             // 外部ファイル読み取りが塞がれていること
-            let err = s.conn.query("SELECT * FROM read_csv('C:/whatever.csv')").unwrap_err();
+            let err = s
+                .conn
+                .query("SELECT * FROM read_csv('C:/whatever.csv')")
+                .unwrap_err();
             assert!(!err.is_empty(), "外部アクセスが拒否されなかった");
         })
         .unwrap();

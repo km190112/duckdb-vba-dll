@@ -141,7 +141,9 @@ mod tests {
     fn unknown_format_is_rejected_with_valid_options() {
         let path = seeded("schema_bad.db");
         let h = conn::open(Level::Admin, &path, OpenOptions::default()).unwrap();
-        let err = conn::with_conn(h, |s| export(s, "json")).unwrap().unwrap_err();
+        let err = conn::with_conn(h, |s| export(s, "json"))
+            .unwrap()
+            .unwrap_err();
         assert!(err.contains("table"), "{err}");
         assert!(err.contains("ddl"), "{err}");
         conn::close(h).unwrap();

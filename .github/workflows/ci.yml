@@ -1,0 +1,69 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  test:
+    # DLL は Windows x64 専用で、境界テストも VARIANT / SAFEARRAY を実際に通すため
+    # Windows ランナーでしか意味を持たない。
+    runs-on: windows-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Rust ツールチェーン
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: x86_64-pc-windows-msvc
+          components: rustfmt, clippy
+
+      # DuckDB をソースからビルドするため、キャッシュが無いと毎回 10 分以上かかる
+      - name: 依存とビルド成果物のキャッシュ
+        uses: Swatinem/rust-cache@v2
+
+      - name: 書式の確認
+        run: cargo fmt --all --check
+
+      - name: clippy
+        run: cargo clippy --workspace --all-targets -- -D warnings
+
+      - name: Rust テスト
+        run: cargo test --workspace
+
+      - name: リリースビルド
+        run: cargo build --workspace --release
+
+      # ここが本命。.NET の [MarshalAs(UnmanagedType.Struct)] ref object は
+      # VARIANT* として渡るため、VBA の ByRef ... As Variant とまったく同じ ABI を
+      # 通る。Excel を起動せずに VBA 境界そのものを検証できる。
+      - name: VBA 境界テスト
+        shell: pwsh
+        run: ./tests/vba_boundary_test.ps1
+
+      - name: VBA モジュールが再生成と一致するか
+        shell: pwsh
+        run: |
+          ./vba/generate_modules.ps1
+          $changed = git status --porcelain vba/
+          if ($changed) {
+            Write-Host "生成物がテンプレートと一致しません。" -ForegroundColor Red
+            Write-Host "vba/DackDb.template.bas を直したあと generate_modules.ps1 を実行して commit してください。"
+            Write-Host $changed
+            exit 1
+          }
+          Write-Host "vba/*.bas はテンプレートと一致しています"
+
+      - name: DLL を成果物として保存
+        uses: actions/upload-artifact@v4
+        with:
+          name: dackdb-dlls-x64
+          path: target/release/dackdb_*.dll
+          retention-days: 14

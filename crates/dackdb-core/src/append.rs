@@ -19,11 +19,7 @@ use crate::raw::Appender;
 /// 途中で失敗しても中途半端に行が入らないよう、全体をトランザクションで囲む。
 /// Appender は内部バッファが埋まると自動的に書き出すため、トランザクションが無いと
 /// 「1000 行目でエラー、でも 800 行は入っている」という状態が起こり得る。
-pub fn append_array(
-    state: &ConnState,
-    table: &str,
-    data: &InputGrid,
-) -> Result<i64, String> {
+pub fn append_array(state: &ConnState, table: &str, data: &InputGrid) -> Result<i64, String> {
     let appender = Appender::new(&state.conn, table)?;
 
     let table_cols = appender.column_count();
@@ -61,11 +57,11 @@ fn fill(appender: &Appender, data: &InputGrid) -> Result<(), String> {
         for c in 0..data.cols {
             let pos = data.position(r, c);
             let value = unsafe { inbound::variant_to_value(data.get(r, c), &pos) }?;
-            appender
-                .append_value(value.raw())
-                .map_err(|e| format!("{pos}: {e}"))?;
+            unsafe { appender.append_value(value.raw()) }.map_err(|e| format!("{pos}: {e}"))?;
         }
-        appender.end_row().map_err(|e| format!("{} 行目: {e}", r + 1))?;
+        appender
+            .end_row()
+            .map_err(|e| format!("{} 行目: {e}", r + 1))?;
     }
     Ok(())
 }
@@ -140,10 +136,7 @@ mod tests {
             assert_eq!(count_rows(s), 2);
 
             // 日本語が壊れていないこと
-            let mut r = s
-                .conn
-                .query("SELECT 部署 FROM 売上 WHERE id = 1")
-                .unwrap();
+            let mut r = s.conn.query("SELECT 部署 FROM 売上 WHERE id = 1").unwrap();
             let chunk = r.next_chunk().unwrap();
             let v = chunk.vector(0);
             let mut cell = unsafe { crate::value::cell_to_variant(&v, 0) };
@@ -185,7 +178,10 @@ mod tests {
         conn::with_conn(h, |s| {
             let grid = unsafe { inbound::read_input_grid(&input, "データ") }.unwrap();
             let err = append_array(s, "売上", &grid).unwrap_err();
-            assert!(err.contains("4 列"), "テーブルの列数が示されていない: {err}");
+            assert!(
+                err.contains("4 列"),
+                "テーブルの列数が示されていない: {err}"
+            );
             assert!(err.contains("2 列"), "渡された列数が示されていない: {err}");
         })
         .unwrap();

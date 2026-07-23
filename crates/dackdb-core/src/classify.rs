@@ -143,12 +143,7 @@ fn api_allows(api: ApiKind, t: ffi::duckdb_statement_type) -> bool {
 ///
 /// 部分実行を許すと `INSERT ...; DROP TABLE t;` で INSERT だけ通ってから
 /// 失敗する、といった中途半端な状態が起きるため、実行前に全文を検査する。
-pub fn check(
-    level: Level,
-    api: ApiKind,
-    conn: &Connection,
-    sql: &str,
-) -> Result<(), String> {
+pub fn check(level: Level, api: ApiKind, conn: &Connection, sql: &str) -> Result<(), String> {
     let extracted = Extracted::extract(conn, sql)?;
     let n = extracted.count();
 
@@ -246,7 +241,10 @@ mod tests {
         assert!(is_allowed(Level::ReadWrite, SELECT));
         assert!(is_allowed(Level::ReadWrite, INSERT));
         for t in [CREATE, DROP, ATTACH, SET, PRAGMA, LOAD, COPY, MULTI] {
-            assert!(!is_allowed(Level::ReadWrite, t), "ReadWrite が {t} を許可している");
+            assert!(
+                !is_allowed(Level::ReadWrite, t),
+                "ReadWrite が {t} を許可している"
+            );
         }
     }
 
@@ -254,14 +252,22 @@ mod tests {
     #[test]
     fn prepare_and_execute_are_denied_below_admin() {
         for level in [Level::Read, Level::ReadWrite] {
-            assert!(!is_allowed(level, PREPARE), "{level:?} が PREPARE を許可している");
-            assert!(!is_allowed(level, EXECUTE), "{level:?} が EXECUTE を許可している");
+            assert!(
+                !is_allowed(level, PREPARE),
+                "{level:?} が PREPARE を許可している"
+            );
+            assert!(
+                !is_allowed(level, EXECUTE),
+                "{level:?} が EXECUTE を許可している"
+            );
         }
     }
 
     #[test]
     fn admin_allows_everything_except_invalid() {
-        for t in [SELECT, INSERT, CREATE, DROP, ATTACH, SET, PRAGMA, LOAD, COPY, MULTI] {
+        for t in [
+            SELECT, INSERT, CREATE, DROP, ATTACH, SET, PRAGMA, LOAD, COPY, MULTI,
+        ] {
             assert!(is_allowed(Level::Admin, t), "Admin が {t} を拒否している");
         }
         assert!(!is_allowed(Level::Admin, INVALID));

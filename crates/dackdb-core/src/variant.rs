@@ -30,7 +30,10 @@ impl Grid {
 
     /// 列数だけ決めてヘッダ無しで開始する。
     pub fn with_cols(cols: usize) -> Self {
-        Grid { cols, cells: Vec::new() }
+        Grid {
+            cols,
+            cells: Vec::new(),
+        }
     }
 
     pub fn cols(&self) -> usize {
@@ -38,11 +41,9 @@ impl Grid {
     }
 
     pub fn rows(&self) -> usize {
-        if self.cols == 0 {
-            0
-        } else {
-            self.cells.len() / self.cols
-        }
+        // 列数 0 の Grid は into_variant で弾かれるが、そこに至る前に
+        // rows() が呼ばれても 0 除算にならないようにする。
+        self.cells.len().checked_div(self.cols).unwrap_or(0)
     }
 
     /// 1 セル追加する。呼び出し側が行あたり `cols` 個ちょうど積むこと。
@@ -96,8 +97,14 @@ impl Grid {
         // rgsabound[0] が最も左（＝最も速く変化する）次元。
         // VBA の arr(row, col) に合わせて 次元1 = 行、次元2 = 列 とする。
         let bounds = [
-            SAFEARRAYBOUND { cElements: rows as u32, lLbound: 1 },
-            SAFEARRAYBOUND { cElements: cols as u32, lLbound: 1 },
+            SAFEARRAYBOUND {
+                cElements: rows as u32,
+                lLbound: 1,
+            },
+            SAFEARRAYBOUND {
+                cElements: cols as u32,
+                lLbound: 1,
+            },
         ];
 
         let psa = unsafe { SafeArrayCreate(VT_VARIANT, 2, bounds.as_ptr()) };
@@ -113,7 +120,9 @@ impl Grid {
         if hr != S_OK || data.is_null() {
             unsafe { SafeArrayDestroy(psa) };
             self.clear_all();
-            return Err(format!("SafeArrayAccessData に失敗しました (HRESULT=0x{hr:08X})"));
+            return Err(format!(
+                "SafeArrayAccessData に失敗しました (HRESULT=0x{hr:08X})"
+            ));
         }
 
         // SAFEARRAY は列優先。要素 (r, c) の線形位置は c * rows + r。

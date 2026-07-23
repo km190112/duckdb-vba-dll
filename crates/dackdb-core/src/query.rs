@@ -41,15 +41,17 @@ pub fn execute_ddl(state: &ConnState, sql: &str) -> Result<i64, String> {
 fn result_to_grid(result: &mut crate::raw::QueryResult) -> Result<Grid, String> {
     let ncols = result.column_count();
     if ncols == 0 {
-        return Err("この SQL は結果セットを返しません。DackExecute を使ってください。".to_string());
+        return Err(
+            "この SQL は結果セットを返しません。DackExecute を使ってください。".to_string(),
+        );
     }
 
     let headers: Vec<String> = (0..ncols).map(|c| result.column_name(c)).collect();
 
     // 行を 1 つも組み立てる前に、変換できない型が無いか検査する。
     // 途中まで貼ってから失敗する事態を避ける。
-    for c in 0..ncols {
-        value::check_column_supported(&headers[c], result.column_type(c))?;
+    for (c, name) in headers.iter().enumerate() {
+        value::check_column_supported(name, result.column_type(c))?;
     }
 
     let mut grid = Grid::with_header(&headers);
@@ -81,11 +83,7 @@ fn result_to_grid(result: &mut crate::raw::QueryResult) -> Result<Grid, String> 
 // ---------------------------------------------------------------------------
 
 /// パラメータをバインドして SELECT を実行する。
-pub fn query_params(
-    state: &ConnState,
-    sql: &str,
-    params: &InputGrid,
-) -> Result<VARIANT, String> {
+pub fn query_params(state: &ConnState, sql: &str, params: &InputGrid) -> Result<VARIANT, String> {
     let prepared = prepare_checked(state, ApiKind::Query, sql)?;
     bind_all(&prepared, params)?;
     let mut result = prepared.execute()?;
@@ -93,11 +91,7 @@ pub fn query_params(
 }
 
 /// パラメータをバインドして DML を実行し、影響行数を返す。
-pub fn execute_params(
-    state: &ConnState,
-    sql: &str,
-    params: &InputGrid,
-) -> Result<i64, String> {
+pub fn execute_params(state: &ConnState, sql: &str, params: &InputGrid) -> Result<i64, String> {
     let prepared = prepare_checked(state, ApiKind::Execute, sql)?;
     bind_all(&prepared, params)?;
     let mut result = prepared.execute()?;
@@ -138,8 +132,9 @@ fn bind_all(prepared: &crate::raw::Prepared, params: &InputGrid) -> Result<(), S
     }
 
     for (i, (v, pos)) in values.iter().enumerate() {
+        // value は次の反復まで生存する必要がある（bind はコピーを取る）。
         let value = unsafe { inbound::variant_to_value(v, pos) }?;
-        prepared.bind(i + 1, value.raw())?;
+        unsafe { prepared.bind(i + 1, value.raw()) }?;
     }
     Ok(())
 }
@@ -339,8 +334,11 @@ mod tests {
         let h = conn::open(Level::ReadWrite, &p, OpenOptions::default()).unwrap();
         conn::with_conn(h, |s| {
             // 後半に DDL を紛れ込ませる古典的な手口
-            let err = execute(s, "INSERT INTO 売上 VALUES (9,'x',1,NULL); DROP TABLE 売上;")
-                .unwrap_err();
+            let err = execute(
+                s,
+                "INSERT INTO 売上 VALUES (9,'x',1,NULL); DROP TABLE 売上;",
+            )
+            .unwrap_err();
             assert!(err.contains("DROP"), "DROP が検出されていない: {err}");
 
             // 拒否されたなら INSERT も実行されていないこと（部分実行の禁止）
@@ -430,7 +428,10 @@ mod tests {
         let h = conn::open(Level::Read, &p, OpenOptions::default()).unwrap();
         conn::with_conn(h, |s| {
             let err = execute(s, "INSERT INTO 売上 VALUES (9,'x',1,NULL)").unwrap_err();
-            assert!(err.contains("dackdb_rw.dll"), "上位 DLL の案内が無い: {err}");
+            assert!(
+                err.contains("dackdb_rw.dll"),
+                "上位 DLL の案内が無い: {err}"
+            );
         })
         .unwrap();
         conn::close(h).unwrap();
@@ -551,9 +552,11 @@ mod tests {
 
         conn::with_conn(h, |s| {
             let g = unsafe { inbound::read_input_grid(&input, "パラメータ") }.unwrap();
-            let err =
-                execute_params(s, "DELETE FROM 売上 WHERE id = ?", &g).unwrap_err();
-            assert!(err.contains("dackdb_rw.dll"), "権限ゲートが効いていない: {err}");
+            let err = execute_params(s, "DELETE FROM 売上 WHERE id = ?", &g).unwrap_err();
+            assert!(
+                err.contains("dackdb_rw.dll"),
+                "権限ゲートが効いていない: {err}"
+            );
         })
         .unwrap();
 
@@ -570,9 +573,8 @@ mod tests {
 
         conn::with_conn(h, |s| {
             let g = unsafe { inbound::read_input_grid(&input, "パラメータ") }.unwrap();
-            let err =
-                execute_params(s, "DELETE FROM 売上 WHERE id = ?; DROP TABLE 売上;", &g)
-                    .unwrap_err();
+            let err = execute_params(s, "DELETE FROM 売上 WHERE id = ?; DROP TABLE 売上;", &g)
+                .unwrap_err();
             assert!(err.contains("1 文だけ"), "{err}");
         })
         .unwrap();
@@ -627,7 +629,9 @@ mod tests {
     fn describe_returns_column_metadata() {
         let p = seeded("desc.db");
         let h = conn::open(Level::Read, &p, OpenOptions::default()).unwrap();
-        let mut v = conn::with_conn(h, |s| describe(s, "売上")).unwrap().unwrap();
+        let mut v = conn::with_conn(h, |s| describe(s, "売上"))
+            .unwrap()
+            .unwrap();
         unsafe {
             let mut ub_r = 0i32;
             SafeArrayGetUBound(v.value.parray, 1, &mut ub_r);
@@ -641,7 +645,7 @@ mod tests {
     fn list_tables_includes_seeded_table() {
         let p = seeded("list.db");
         let h = conn::open(Level::Read, &p, OpenOptions::default()).unwrap();
-        let mut v = conn::with_conn(h, |s| list_tables(s)).unwrap().unwrap();
+        let mut v = conn::with_conn(h, list_tables).unwrap().unwrap();
         unsafe {
             let mut name = cell(v.value.parray, 2, 2);
             assert_eq!(bstr_to_string(name.value.bstrVal), "売上");

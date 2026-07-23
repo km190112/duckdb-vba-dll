@@ -52,8 +52,7 @@ impl Config {
     pub fn set(&mut self, name: &str, value: &str) -> Result<(), String> {
         let cname = to_cstring(name)?;
         let cvalue = to_cstring(value)?;
-        let state =
-            unsafe { ffi::duckdb_set_config(self.handle, cname.as_ptr(), cvalue.as_ptr()) };
+        let state = unsafe { ffi::duckdb_set_config(self.handle, cname.as_ptr(), cvalue.as_ptr()) };
         if state != ffi::DuckDBSuccess {
             return Err(format!("DuckDB の設定 '{name}' = '{value}' に失敗しました"));
         }
@@ -89,9 +88,8 @@ impl Database {
         let mut handle: ffi::duckdb_database = std::ptr::null_mut();
         let mut err: *mut c_char = std::ptr::null_mut();
 
-        let state = unsafe {
-            ffi::duckdb_open_ext(cpath.as_ptr(), &mut handle, config.handle, &mut err)
-        };
+        let state =
+            unsafe { ffi::duckdb_open_ext(cpath.as_ptr(), &mut handle, config.handle, &mut err) };
 
         if state != ffi::DuckDBSuccess {
             let msg = unsafe { cstr_to_string(err) };
@@ -243,7 +241,10 @@ impl DataChunk {
     /// 指定列のベクタ。返り値はチャンクの生存期間に束縛される。
     pub fn vector(&self, col: usize) -> Vector<'_> {
         let v = unsafe { ffi::duckdb_data_chunk_get_vector(self.handle, col as ffi::idx_t) };
-        Vector { handle: v, _chunk: std::marker::PhantomData }
+        Vector {
+            handle: v,
+            _chunk: std::marker::PhantomData,
+        }
     }
 }
 
@@ -407,9 +408,11 @@ impl Prepared {
     }
 
     /// `?` の `index` 番目（1 始まり）に値をバインドする。
-    pub fn bind(&self, index: usize, value: ffi::duckdb_value) -> Result<(), String> {
-        let state =
-            unsafe { ffi::duckdb_bind_value(self.handle, index as ffi::idx_t, value) };
+    ///
+    /// # Safety
+    /// `value` は有効な `duckdb_value` であること（呼び出し側が所有権を保持する）。
+    pub unsafe fn bind(&self, index: usize, value: ffi::duckdb_value) -> Result<(), String> {
+        let state = unsafe { ffi::duckdb_bind_value(self.handle, index as ffi::idx_t, value) };
         if state != ffi::DuckDBSuccess {
             let msg = unsafe { cstr_to_string(ffi::duckdb_prepare_error(self.handle)) };
             return Err(if msg.is_empty() {
@@ -456,12 +459,7 @@ impl Appender {
         let mut handle: ffi::duckdb_appender = std::ptr::null_mut();
         let state = unsafe {
             // schema に null を渡すと既定のスキーマが使われる
-            ffi::duckdb_appender_create(
-                conn.raw(),
-                std::ptr::null(),
-                ctable.as_ptr(),
-                &mut handle,
-            )
+            ffi::duckdb_appender_create(conn.raw(), std::ptr::null(), ctable.as_ptr(), &mut handle)
         };
         let appender = Appender { handle };
         if state != ffi::DuckDBSuccess {
@@ -480,8 +478,10 @@ impl Appender {
         unsafe { ffi::duckdb_appender_column_count(self.handle) as usize }
     }
 
-    pub fn append_value(&self, value: ffi::duckdb_value) -> Result<(), String> {
-        if unsafe { ffi::duckdb_append_value(self.handle, value) } != ffi::DuckDBSuccess {
+    /// # Safety
+    /// `value` は有効な `duckdb_value` であること（呼び出し側が所有権を保持する）。
+    pub unsafe fn append_value(&self, value: ffi::duckdb_value) -> Result<(), String> {
+        if ffi::duckdb_append_value(self.handle, value) != ffi::DuckDBSuccess {
             return Err(self.error_or("値を追加できませんでした"));
         }
         Ok(())

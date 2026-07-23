@@ -15,7 +15,10 @@
 ///   巻き戻って Excel がプロセスごと落ちる**。そのため release プロファイルで
 ///   `panic = "abort"` を指定してはいけない（指定すると catch_unwind が無力になる）。
 /// - 成功／失敗のどちらでも `out` に書き込むので、VBA 側の分岐が 1 本で済む。
-pub fn guard(
+///
+/// # Safety
+/// `out` は VBA が所有する有効な `VARIANT*` か null であること。
+pub unsafe fn guard(
     out: *mut crate::oleaut::VARIANT,
     f: impl FnOnce() -> Result<crate::oleaut::VARIANT, String>,
 ) -> i32 {
@@ -60,8 +63,11 @@ pub fn guard(
 }
 
 /// VBA から渡された UTF-16 ポインタを `String` にする。null なら分かりやすいエラー。
-pub fn arg_string(p: *const u16, name: &str) -> Result<String, String> {
-    unsafe { crate::oleaut::wide_ptr_to_string(p) }
+///
+/// # Safety
+/// `p` は NUL 終端の有効な UTF-16 文字列へのポインタか null であること。
+pub unsafe fn arg_string(p: *const u16, name: &str) -> Result<String, String> {
+    crate::oleaut::wide_ptr_to_string(p)
         .ok_or_else(|| format!("引数 {name} が空（null）です。StrPtr() で渡してください。"))
 }
 
@@ -80,6 +86,12 @@ pub fn arg_string(p: *const u16, name: &str) -> Result<String, String> {
 /// 権限外の関数も存在はし、`DACK_E_FORBIDDEN` と案内メッセージを返す。
 /// こうすることで VBA 側モジュールは `Lib "..."` の文字列だけが違う 3 ファイルになり、
 /// 階層② 向けに書いたコードが階層③ でそのまま動く。
+///
+/// # 生成される関数が `unsafe` な理由
+///
+/// VBA から渡ってくるのは検証されていない生ポインタなので、これらは本質的に
+/// unsafe な入口である。`unsafe extern "system" fn` にしてもエクスポートされる
+/// シンボル名と ABI は変わらないため、VBA 側の `Declare` には影響しない。
 #[macro_export]
 macro_rules! export_dackdb_ffi {
     ($level:expr) => {
@@ -91,17 +103,17 @@ macro_rules! export_dackdb_ffi {
         // ---- 全階層 ----
 
         #[no_mangle]
-        pub extern "system" fn DackVersion(out: *mut DackVariant) -> i32 {
+        pub unsafe extern "system" fn DackVersion(out: *mut DackVariant) -> i32 {
             $crate::ffi::guard(out, || $crate::api::version(DACK_LEVEL))
         }
 
         #[no_mangle]
-        pub extern "system" fn DackCapabilities(out: *mut DackVariant) -> i32 {
+        pub unsafe extern "system" fn DackCapabilities(out: *mut DackVariant) -> i32 {
             $crate::ffi::guard(out, || $crate::api::capabilities(DACK_LEVEL))
         }
 
         #[no_mangle]
-        pub extern "system" fn DackOpen(path: *const u16, out: *mut DackVariant) -> i32 {
+        pub unsafe extern "system" fn DackOpen(path: *const u16, out: *mut DackVariant) -> i32 {
             $crate::ffi::guard(out, || {
                 let p = $crate::ffi::arg_string(path, "path")?;
                 $crate::api::open(DACK_LEVEL, &p)
@@ -109,12 +121,12 @@ macro_rules! export_dackdb_ffi {
         }
 
         #[no_mangle]
-        pub extern "system" fn DackClose(handle: i64, out: *mut DackVariant) -> i32 {
+        pub unsafe extern "system" fn DackClose(handle: i64, out: *mut DackVariant) -> i32 {
             $crate::ffi::guard(out, || $crate::api::close(handle))
         }
 
         #[no_mangle]
-        pub extern "system" fn DackQuery(
+        pub unsafe extern "system" fn DackQuery(
             handle: i64,
             sql: *const u16,
             out: *mut DackVariant,
@@ -126,7 +138,7 @@ macro_rules! export_dackdb_ffi {
         }
 
         #[no_mangle]
-        pub extern "system" fn DackQueryParams(
+        pub unsafe extern "system" fn DackQueryParams(
             handle: i64,
             sql: *const u16,
             params: *const DackVariant,
@@ -139,12 +151,12 @@ macro_rules! export_dackdb_ffi {
         }
 
         #[no_mangle]
-        pub extern "system" fn DackListTables(handle: i64, out: *mut DackVariant) -> i32 {
+        pub unsafe extern "system" fn DackListTables(handle: i64, out: *mut DackVariant) -> i32 {
             $crate::ffi::guard(out, || $crate::api::list_tables(handle))
         }
 
         #[no_mangle]
-        pub extern "system" fn DackDescribe(
+        pub unsafe extern "system" fn DackDescribe(
             handle: i64,
             table: *const u16,
             out: *mut DackVariant,
@@ -158,7 +170,7 @@ macro_rules! export_dackdb_ffi {
         // ---- 階層② 以上（下位では DACK_E_FORBIDDEN） ----
 
         #[no_mangle]
-        pub extern "system" fn DackExecute(
+        pub unsafe extern "system" fn DackExecute(
             handle: i64,
             sql: *const u16,
             out: *mut DackVariant,
@@ -170,7 +182,7 @@ macro_rules! export_dackdb_ffi {
         }
 
         #[no_mangle]
-        pub extern "system" fn DackExecuteParams(
+        pub unsafe extern "system" fn DackExecuteParams(
             handle: i64,
             sql: *const u16,
             params: *const DackVariant,
@@ -183,7 +195,7 @@ macro_rules! export_dackdb_ffi {
         }
 
         #[no_mangle]
-        pub extern "system" fn DackAppendArray(
+        pub unsafe extern "system" fn DackAppendArray(
             handle: i64,
             table: *const u16,
             data: *const DackVariant,
@@ -196,24 +208,24 @@ macro_rules! export_dackdb_ffi {
         }
 
         #[no_mangle]
-        pub extern "system" fn DackBegin(handle: i64, out: *mut DackVariant) -> i32 {
+        pub unsafe extern "system" fn DackBegin(handle: i64, out: *mut DackVariant) -> i32 {
             $crate::ffi::guard(out, || $crate::api::begin(DACK_LEVEL, handle))
         }
 
         #[no_mangle]
-        pub extern "system" fn DackCommit(handle: i64, out: *mut DackVariant) -> i32 {
+        pub unsafe extern "system" fn DackCommit(handle: i64, out: *mut DackVariant) -> i32 {
             $crate::ffi::guard(out, || $crate::api::commit(DACK_LEVEL, handle))
         }
 
         #[no_mangle]
-        pub extern "system" fn DackRollback(handle: i64, out: *mut DackVariant) -> i32 {
+        pub unsafe extern "system" fn DackRollback(handle: i64, out: *mut DackVariant) -> i32 {
             $crate::ffi::guard(out, || $crate::api::rollback(DACK_LEVEL, handle))
         }
 
         // ---- 階層③ のみ ----
 
         #[no_mangle]
-        pub extern "system" fn DackCreateDatabase(
+        pub unsafe extern "system" fn DackCreateDatabase(
             path: *const u16,
             out: *mut DackVariant,
         ) -> i32 {
@@ -224,7 +236,7 @@ macro_rules! export_dackdb_ffi {
         }
 
         #[no_mangle]
-        pub extern "system" fn DackExecuteDDL(
+        pub unsafe extern "system" fn DackExecuteDDL(
             handle: i64,
             sql: *const u16,
             out: *mut DackVariant,
@@ -236,7 +248,7 @@ macro_rules! export_dackdb_ffi {
         }
 
         #[no_mangle]
-        pub extern "system" fn DackExportSchema(
+        pub unsafe extern "system" fn DackExportSchema(
             handle: i64,
             format: *const u16,
             out: *mut DackVariant,
@@ -248,7 +260,7 @@ macro_rules! export_dackdb_ffi {
         }
 
         #[no_mangle]
-        pub extern "system" fn DackCheckpoint(handle: i64, out: *mut DackVariant) -> i32 {
+        pub unsafe extern "system" fn DackCheckpoint(handle: i64, out: *mut DackVariant) -> i32 {
             $crate::ffi::guard(out, || $crate::api::checkpoint(DACK_LEVEL, handle))
         }
     };
@@ -262,7 +274,7 @@ mod tests {
     #[test]
     fn guard_writes_value_and_returns_ok() {
         let mut out = VARIANT::empty();
-        let rc = guard(&mut out, || Ok(VARIANT::i64(42)));
+        let rc = unsafe { guard(&mut out, || Ok(VARIANT::i64(42))) };
         assert_eq!(rc, crate::api::DACK_OK);
         assert_eq!(out.vt, VT_I8);
         assert_eq!(unsafe { out.value.llVal }, 42);
@@ -272,7 +284,8 @@ mod tests {
     #[test]
     fn guard_writes_error_message_into_the_same_out_param() {
         let mut out = VARIANT::empty();
-        let rc = guard(&mut out, || Err("テーブルが見つかりません".to_string()));
+        let rc =
+            unsafe { guard(&mut out, || Err("テーブルが見つかりません".to_string())) };
         assert_eq!(rc, crate::api::DACK_E_GENERAL);
         assert_eq!(out.vt, VT_BSTR);
         assert_eq!(
@@ -289,13 +302,16 @@ mod tests {
         let prev = std::panic::take_hook();
         std::panic::set_hook(Box::new(|_| {})); // テスト出力を汚さない
         let mut out = VARIANT::empty();
-        let rc = guard(&mut out, || panic!("意図的なテスト用 panic"));
+        let rc = unsafe { guard(&mut out, || panic!("意図的なテスト用 panic")) };
         std::panic::set_hook(prev);
 
         assert_eq!(rc, crate::api::DACK_E_PANIC);
         assert_eq!(out.vt, VT_BSTR);
         let msg = unsafe { bstr_to_string(out.value.bstrVal) };
-        assert!(msg.contains("意図的なテスト用 panic"), "panic 内容が失われた: {msg}");
+        assert!(
+            msg.contains("意図的なテスト用 panic"),
+            "panic 内容が失われた: {msg}"
+        );
         assert!(msg.contains("報告"), "報告の案内が無い: {msg}");
         out.clear();
     }
@@ -303,16 +319,18 @@ mod tests {
     #[test]
     fn guard_reports_forbidden_separately_from_general_errors() {
         let mut out = VARIANT::empty();
-        let rc = guard(&mut out, || {
-            Err("DackExecute はこの DLL では使えません。".to_string())
-        });
+        let rc = unsafe {
+            guard(&mut out, || {
+                Err("DackExecute はこの DLL では使えません。".to_string())
+            })
+        };
         assert_eq!(rc, crate::api::DACK_E_FORBIDDEN);
         out.clear();
     }
 
     #[test]
     fn arg_string_rejects_null_with_guidance() {
-        let err = arg_string(std::ptr::null(), "sql").unwrap_err();
+        let err = unsafe { arg_string(std::ptr::null(), "sql") }.unwrap_err();
         assert!(err.contains("StrPtr"), "{err}");
     }
 
@@ -320,6 +338,9 @@ mod tests {
     fn arg_string_reads_japanese_utf16() {
         let mut w: Vec<u16> = "SELECT * FROM 売上".encode_utf16().collect();
         w.push(0);
-        assert_eq!(arg_string(w.as_ptr(), "sql").unwrap(), "SELECT * FROM 売上");
+        assert_eq!(
+            unsafe { arg_string(w.as_ptr(), "sql") }.unwrap(),
+            "SELECT * FROM 売上"
+        );
     }
 }

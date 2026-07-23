@@ -120,7 +120,13 @@ impl VARIANT {
     }
 
     fn of(vt: u16, value: VARIANT_VALUE) -> Self {
-        VARIANT { vt, wReserved1: 0, wReserved2: 0, wReserved3: 0, value }
+        VARIANT {
+            vt,
+            wReserved1: 0,
+            wReserved2: 0,
+            wReserved3: 0,
+            value,
+        }
     }
 
     /// SQL の NULL。VBA の `IsNull()` が True になり、セルは空欄になる。
@@ -235,10 +241,12 @@ extern "system" {
     pub fn SafeArrayGetLBound(psa: *mut SAFEARRAY, nDim: u32, plLbound: *mut i32) -> i32;
     pub fn SafeArrayGetUBound(psa: *mut SAFEARRAY, nDim: u32, plUbound: *mut i32) -> i32;
     pub fn SafeArrayGetVartype(psa: *mut SAFEARRAY, pvt: *mut u16) -> i32;
-    pub fn SafeArrayGetElement(psa: *mut SAFEARRAY, rgIndices: *const i32, pv: *mut c_void)
-        -> i32;
-    pub fn SafeArrayPutElement(psa: *mut SAFEARRAY, rgIndices: *const i32, pv: *const c_void)
-        -> i32;
+    pub fn SafeArrayGetElement(psa: *mut SAFEARRAY, rgIndices: *const i32, pv: *mut c_void) -> i32;
+    pub fn SafeArrayPutElement(
+        psa: *mut SAFEARRAY,
+        rgIndices: *const i32,
+        pv: *const c_void,
+    ) -> i32;
     pub fn SafeArrayAccessData(psa: *mut SAFEARRAY, ppvData: *mut *mut c_void) -> i32;
     pub fn SafeArrayUnaccessData(psa: *mut SAFEARRAY) -> i32;
 }

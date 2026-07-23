@@ -82,7 +82,12 @@ pub unsafe fn variant_to_value(v: &VARIANT, where_: &str) -> Result<DuckValue, S
             VT_R8 | VT_DATE => deref.value.dblVal = *(inner as *const f64),
             VT_BOOL => deref.value.boolVal = *(inner as *const i16),
             VT_BSTR => deref.value.bstrVal = *(inner as *const *mut u16),
-            _ => return Err(format!("{where_}: 対応していない参照渡しの型 (vt=0x{:04X})", v.vt)),
+            _ => {
+                return Err(format!(
+                    "{where_}: 対応していない参照渡しの型 (vt=0x{:04X})",
+                    v.vt
+                ))
+            }
         }
         return variant_to_value(&deref, where_);
     }
@@ -178,8 +183,7 @@ unsafe fn byte_array_to_blob(psa: *mut SAFEARRAY, where_: &str) -> Result<DuckVa
     }
     let mut lb = 0i32;
     let mut ub = 0i32;
-    if SafeArrayGetLBound(psa, 1, &mut lb) != S_OK || SafeArrayGetUBound(psa, 1, &mut ub) != S_OK
-    {
+    if SafeArrayGetLBound(psa, 1, &mut lb) != S_OK || SafeArrayGetUBound(psa, 1, &mut ub) != S_OK {
         return Err(format!("{where_}: バイト配列の範囲を取得できませんでした"));
     }
     let len = (ub - lb + 1).max(0) as usize;
@@ -288,7 +292,9 @@ pub unsafe fn read_input_grid(v: &VARIANT, what: &str) -> Result<InputGrid, Stri
 
     let dims = SafeArrayGetDim(psa);
     if dims == 0 || dims > 2 {
-        return Err(format!("{what} は 1 次元か 2 次元の配列である必要があります（実際: {dims} 次元）。"));
+        return Err(format!(
+            "{what} は 1 次元か 2 次元の配列である必要があります（実際: {dims} 次元）。"
+        ));
     }
 
     let bound = |d: u32| -> Result<(i32, i32), String> {
@@ -338,7 +344,12 @@ pub unsafe fn read_input_grid(v: &VARIANT, what: &str) -> Result<InputGrid, Stri
         }
     }
 
-    Ok(InputGrid { psa, rows, cols, cells })
+    Ok(InputGrid {
+        psa,
+        rows,
+        cols,
+        cells,
+    })
 }
 
 #[cfg(test)]
@@ -410,7 +421,10 @@ mod tests {
                 (VARIANT::date(45306.0), "DATE"),
             ] {
                 let mut v = v;
-                assert!(variant_to_value(&v, label).is_ok(), "{label} が変換できない");
+                assert!(
+                    variant_to_value(&v, label).is_ok(),
+                    "{label} が変換できない"
+                );
                 v.clear();
             }
             let mut s = VARIANT::bstr("営業部");

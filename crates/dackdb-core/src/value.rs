@@ -128,8 +128,7 @@ pub unsafe fn cell_to_variant(vec: &Vector<'_>, row: usize) -> VARIANT {
             VARIANT::bstr(&format!("{:?}", *(data as *const i64).add(row)))
         }
 
-        DUCKDB_TYPE_DUCKDB_TYPE_TIMESTAMP
-        | DUCKDB_TYPE_DUCKDB_TYPE_TIMESTAMP_TZ => {
+        DUCKDB_TYPE_DUCKDB_TYPE_TIMESTAMP | DUCKDB_TYPE_DUCKDB_TYPE_TIMESTAMP_TZ => {
             let ts = *(data as *const i64).add(row);
             timestamp_micros_to_variant(ts)
         }
@@ -235,15 +234,22 @@ fn uuid_to_string(h: ffi::duckdb_hugeint) -> String {
 /// よって 18 を境界にする。18 以下は数値、19 以上は厳密な文字列。
 const DECIMAL_MAX_WIDTH_AS_F64: u8 = 18;
 
+// しきい値が「金額列でよくある DECIMAL(18,2) は数値、それ以上は文字列」から
+// ずれていないことをコンパイル時に固定する。
+const _: () = assert!(
+    DECIMAL_MAX_WIDTH_AS_F64 >= 18,
+    "DECIMAL(18,2) は数値で返す必要がある（Excel で SUM が効くように）"
+);
+const _: () = assert!(
+    DECIMAL_MAX_WIDTH_AS_F64 < 19,
+    "DECIMAL(19,x) は f64 で表せないので文字列で返す必要がある"
+);
+
 /// DECIMAL の変換。
 ///
 /// 宣言桁数が [`DECIMAL_MAX_WIDTH_AS_F64`] を超える場合は、黙って丸めず
 /// 厳密な 10 進文字列にする。
-unsafe fn decimal_to_variant(
-    vec: &Vector<'_>,
-    data: *mut std::ffi::c_void,
-    row: usize,
-) -> VARIANT {
+unsafe fn decimal_to_variant(vec: &Vector<'_>, data: *mut std::ffi::c_void, row: usize) -> VARIANT {
     use ffi::*;
     let (width, scale) = vec.decimal_width_scale();
 
@@ -278,17 +284,16 @@ fn decimal_to_string(unscaled: i128, scale: u8) -> String {
         let split = digits.len() - scale;
         (digits[..split].to_string(), digits[split..].to_string())
     } else {
-        ("0".to_string(), format!("{:0>width$}", digits, width = scale))
+        (
+            "0".to_string(),
+            format!("{:0>width$}", digits, width = scale),
+        )
     };
     format!("{}{}.{}", if neg { "-" } else { "" }, int_part, frac_part)
 }
 
 /// ENUM は辞書引きして文字列にする。
-unsafe fn enum_to_variant(
-    vec: &Vector<'_>,
-    data: *mut std::ffi::c_void,
-    row: usize,
-) -> VARIANT {
+unsafe fn enum_to_variant(vec: &Vector<'_>, data: *mut std::ffi::c_void, row: usize) -> VARIANT {
     use ffi::*;
     let lt = vec.logical_type_raw();
     let index: u64 = match duckdb_enum_internal_type(lt) {
@@ -331,7 +336,10 @@ fn byte_array_variant(bytes: &[u8]) -> VARIANT {
     if bytes.is_empty() {
         return VARIANT::bstr("");
     }
-    let bounds = [SAFEARRAYBOUND { cElements: bytes.len() as u32, lLbound: 0 }];
+    let bounds = [SAFEARRAYBOUND {
+        cElements: bytes.len() as u32,
+        lLbound: 0,
+    }];
     let psa = unsafe { SafeArrayCreate(VT_UI1, 1, bounds.as_ptr()) };
     if psa.is_null() {
         return VARIANT::null();
@@ -372,7 +380,10 @@ mod tests {
             ffi::DUCKDB_TYPE_DUCKDB_TYPE_DECIMAL,
             ffi::DUCKDB_TYPE_DUCKDB_TYPE_BLOB,
         ] {
-            assert!(check_column_supported("x", t).is_ok(), "型 {t} が拒否された");
+            assert!(
+                check_column_supported("x", t).is_ok(),
+                "型 {t} が拒否された"
+            );
         }
     }
 
@@ -390,20 +401,15 @@ mod tests {
         );
     }
 
-    /// 金額列でよくある DECIMAL(18,2) は数値で返す（Excel で SUM が効くように）。
-    /// それを超える宣言は黙って丸めず文字列にする。
-    #[test]
-    fn decimal_threshold_keeps_common_money_columns_numeric() {
-        assert!(18 <= DECIMAL_MAX_WIDTH_AS_F64, "DECIMAL(18,2) は数値であるべき");
-        assert!(19 > DECIMAL_MAX_WIDTH_AS_F64, "DECIMAL(19,x) は文字列であるべき");
-    }
-
     #[test]
     fn hugeint_string_is_exact_not_rounded() {
         // f64 なら丸められてしまう大きさ
         let h = ffi::duckdb_hugeint { lower: 0, upper: 1 };
         assert_eq!(hugeint_to_string(h), "18446744073709551616");
-        let neg = ffi::duckdb_hugeint { lower: u64::MAX, upper: -1 };
+        let neg = ffi::duckdb_hugeint {
+            lower: u64::MAX,
+            upper: -1,
+        };
         assert_eq!(hugeint_to_string(neg), "-1");
     }
 

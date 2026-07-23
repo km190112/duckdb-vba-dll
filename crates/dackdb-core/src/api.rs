@@ -74,8 +74,9 @@ pub unsafe fn query_params(
     params: *const VARIANT,
 ) -> Result<VARIANT, String> {
     if params.is_null() {
-        return Err("パラメータが空です。Array(...) か Range(...).Value を渡してください。"
-            .to_string());
+        return Err(
+            "パラメータが空です。Array(...) か Range(...).Value を渡してください。".to_string(),
+        );
     }
     let grid = crate::inbound::read_input_grid(&*params, "パラメータ")?;
     with(handle, |s| query::query_params(s, sql, &grid))
@@ -122,8 +123,9 @@ pub unsafe fn execute_params(
         ));
     }
     if params.is_null() {
-        return Err("パラメータが空です。Array(...) か Range(...).Value を渡してください。"
-            .to_string());
+        return Err(
+            "パラメータが空です。Array(...) か Range(...).Value を渡してください。".to_string(),
+        );
     }
     let grid = crate::inbound::read_input_grid(&*params, "パラメータ")?;
     with(handle, |s| {
@@ -149,8 +151,9 @@ pub unsafe fn append_array(
         ));
     }
     if data.is_null() {
-        return Err("データが空です。Range(\"A2:F100\").Value のように範囲を渡してください。"
-            .to_string());
+        return Err(
+            "データが空です。Range(\"A2:F100\").Value のように範囲を渡してください。".to_string(),
+        );
     }
     let grid = crate::inbound::read_input_grid(&*data, "データ")?;
     with(handle, |s| {
@@ -170,12 +173,7 @@ pub fn rollback(level: Level, handle: i64) -> Result<VARIANT, String> {
     transaction_stmt(level, handle, "ROLLBACK", "DackRollback")
 }
 
-fn transaction_stmt(
-    level: Level,
-    handle: i64,
-    sql: &str,
-    func: &str,
-) -> Result<VARIANT, String> {
+fn transaction_stmt(level: Level, handle: i64, sql: &str, func: &str) -> Result<VARIANT, String> {
     if !level.allows_write() {
         return Err(forbidden(
             level,
