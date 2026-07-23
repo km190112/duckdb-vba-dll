@@ -1,0 +1,15 @@
+[package]
+name = "dackdb-core"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+description = "Excel VBA から DuckDB を操作するための権限階層付きコアロジック"
+
+[dependencies]
+# DuckDB を静的リンクして DLL 1ファイルで完結させる。
+# buildtime_bindgen は有効にしない（clang 不要。同梱の生成済みバインディングを使う）。
+libduckdb-sys = { workspace = true }
+
+[dev-dependencies]
+tempfile = "3"

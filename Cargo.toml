@@ -1,0 +1,29 @@
+[workspace]
+resolver = "2"
+members = [
+    "crates/dackdb-core",
+    "crates/dackdb-r",
+    "crates/dackdb-rw",
+    "crates/dackdb-admin",
+]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2021"
+rust-version = "1.82"
+license = "MIT"
+
+[workspace.dependencies]
+dackdb-core = { path = "crates/dackdb-core" }
+libduckdb-sys = { version = "1.10505", features = ["bundled"] }
+# VARIANT / SAFEARRAY は `windows` クレートではなく oleaut.rs で手書きしている。
+# 理由は crates/dackdb-core/src/oleaut.rs の冒頭コメントを参照。
+
+# release プロファイル：panic = "abort" は絶対に指定しないこと。
+# FFI 境界で catch_unwind によって panic を捕捉する設計のため、
+# abort にすると Rust の panic がそのまま Excel のクラッシュになる。
+[profile.release]
+opt-level = 3
+lto = "thin"
+codegen-units = 1
+strip = "debuginfo"

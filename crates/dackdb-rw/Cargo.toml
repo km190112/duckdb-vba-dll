@@ -1,0 +1,14 @@
+[package]
+name = "dackdb-rw"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+description = "DuckDB VBA DLL — ② 読み書き可（DDL 不可）"
+
+[lib]
+name = "dackdb_rw"
+crate-type = ["cdylib"]
+
+[dependencies]
+dackdb-core = { workspace = true }

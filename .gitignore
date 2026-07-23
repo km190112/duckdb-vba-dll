@@ -1,0 +1,19 @@
+# Rust のビルド成果物。DuckDB を静的リンクするため 20GB 超になる。
+/target/
+
+# ビルドした DLL は Releases で配布する（リポジトリには入れない）
+*.dll
+*.pdb
+*.lib
+*.exp
+
+# テストが作る一時データベース
+*.db
+*.db.wal
+
+# エディタ / OS
+.vscode/
+.idea/
+*.swp
+Thumbs.db
+Desktop.ini

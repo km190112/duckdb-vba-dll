@@ -1,0 +1,14 @@
+[package]
+name = "dackdb-admin"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+description = "DuckDB VBA DLL — ③ 管理者（全機能）"
+
+[lib]
+name = "dackdb_admin"
+crate-type = ["cdylib"]
+
+[dependencies]
+dackdb-core = { workspace = true }

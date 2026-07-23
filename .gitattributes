@@ -1,0 +1,21 @@
+# --- VBA モジュール ---
+# vba/DackDb*.bas（生成物の 3 本）は Shift-JIS (CP932) + CRLF でなければ
+# VBE がインポートできない。Git にバイト列を一切触らせないため text 変換を切る。
+#
+# 副作用として GitHub の Web 画面では日本語コメントが文字化けして見えるが、
+# VBE 側の要件を優先している。編集するのは UTF-8 の DackDb.template.bas のほう。
+vba/DackDbR.bas     -text -diff linguist-generated=true
+vba/DackDbRW.bas    -text -diff linguist-generated=true
+vba/DackDbAdmin.bas -text -diff linguist-generated=true
+
+# テンプレートは UTF-8。こちらは通常のテキストとして扱う。
+vba/DackDb.template.bas text eol=crlf
+
+# --- それ以外 ---
+*.rs   text eol=lf
+*.toml text eol=lf
+*.lock text eol=lf
+*.md   text eol=lf
+*.ps1  text eol=lf
+*.html text eol=lf
+LICENSE text eol=lf

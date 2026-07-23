@@ -1,0 +1,1067 @@
+<title>dackdb 使い方マニュアル — Excel から DuckDB を使う</title>
+<style>
+  :root {
+    --ground:      #FCFAF9;
+    --surface:     #FFFFFF;
+    --surface-alt: #F7F4F1;
+    --ink:         #37322D;
+    --ink-soft:    #7A7169;
+    --ink-faint:   #A79E95;
+    --clay:        #B24A2C;
+    --clay-deep:   #8E3820;
+    --clay-tint:   #F7ECE6;
+    --clay-edge:   #E8D2C6;
+    --rule:        #EAE4DF;
+    --rule-soft:   #F2EDE9;
+    --good:        #4C7A4A;
+    --good-tint:   #EDF3EC;
+    --warn:        #96671C;
+    --warn-tint:   #FAF1E1;
+    --stop:        #A33A2E;
+    --stop-tint:   #FBEBE8;
+
+    --sans: "Yu Gothic UI", "Hiragino Kaku Gothic ProN", "Noto Sans JP",
+            -apple-system, BlinkMacSystemFont, "Segoe UI", Meiryo, sans-serif;
+    --mono: Consolas, "SF Mono", Menlo, "Yu Gothic UI", monospace;
+
+    --col: 708px;
+    --r: 4px;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --ground:      #1C1A19;
+      --surface:     #232120;
+      --surface-alt: #2A2725;
+      --ink:         #ECE7E2;
+      --ink-soft:    #9E958C;
+      --ink-faint:   #776F68;
+      --clay:        #E08A66;
+      --clay-deep:   #EFA184;
+      --clay-tint:   #35251E;
+      --clay-edge:   #4E362B;
+      --rule:        #35312D;
+      --rule-soft:   #2B2826;
+      --good:        #8CBA88;
+      --good-tint:   #232C22;
+      --warn:        #D6A75B;
+      --warn-tint:   #302819;
+      --stop:        #E08B7E;
+      --stop-tint:   #33211E;
+    }
+  }
+
+  /* 閲覧者のテーマ切替は OS 設定より優先する（両方向） */
+  :root[data-theme="dark"] {
+    --ground:      #1C1A19;
+    --surface:     #232120;
+    --surface-alt: #2A2725;
+    --ink:         #ECE7E2;
+    --ink-soft:    #9E958C;
+    --ink-faint:   #776F68;
+    --clay:        #E08A66;
+    --clay-deep:   #EFA184;
+    --clay-tint:   #35251E;
+    --clay-edge:   #4E362B;
+    --rule:        #35312D;
+    --rule-soft:   #2B2826;
+    --good:        #8CBA88;
+    --good-tint:   #232C22;
+    --warn:        #D6A75B;
+    --warn-tint:   #302819;
+    --stop:        #E08B7E;
+    --stop-tint:   #33211E;
+  }
+  :root[data-theme="light"] {
+    --ground:      #FCFAF9;
+    --surface:     #FFFFFF;
+    --surface-alt: #F7F4F1;
+    --ink:         #37322D;
+    --ink-soft:    #7A7169;
+    --ink-faint:   #A79E95;
+    --clay:        #B24A2C;
+    --clay-deep:   #8E3820;
+    --clay-tint:   #F7ECE6;
+    --clay-edge:   #E8D2C6;
+    --rule:        #EAE4DF;
+    --rule-soft:   #F2EDE9;
+    --good:        #4C7A4A;
+    --good-tint:   #EDF3EC;
+    --warn:        #96671C;
+    --warn-tint:   #FAF1E1;
+    --stop:        #A33A2E;
+    --stop-tint:   #FBEBE8;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    background: var(--ground);
+    color: var(--ink);
+    font-family: var(--sans);
+    font-size: 16px;
+    line-height: 1.75;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* ---------- 骨格：Notion の文書レイアウト ---------- */
+
+  .page {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 0;
+    padding: 0 24px 160px;
+  }
+
+  .col { width: 100%; max-width: var(--col); margin: 0 auto; }
+
+  /* 目次レール。1180px 以上でだけ出す */
+  .toc { display: none; }
+
+  @media (min-width: 1180px) {
+    .page {
+      grid-template-columns: 240px minmax(0, 1fr) 240px;
+      gap: 40px;
+      max-width: 1320px;
+      margin: 0 auto;
+    }
+    .col { max-width: var(--col); }
+    .toc {
+      display: block;
+      grid-column: 1;
+      position: sticky;
+      top: 0;
+      align-self: start;
+      max-height: 100vh;
+      overflow-y: auto;
+      padding: 96px 0 48px;
+    }
+    .main { grid-column: 2; }
+  }
+
+  /* ---------- ページヘッダ ---------- */
+
+  .masthead { padding: 76px 0 0; }
+
+  .page-icon {
+    font-size: 62px;
+    line-height: 1;
+    display: block;
+    margin-bottom: 10px;
+  }
+
+  h1 {
+    font-size: 40px;
+    line-height: 1.2;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    margin: 0 0 10px;
+    text-wrap: balance;
+  }
+
+  .lede {
+    font-size: 17px;
+    color: var(--ink-soft);
+    margin: 0;
+    max-width: 60ch;
+  }
+
+  .meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px 18px;
+    margin-top: 22px;
+    padding-top: 18px;
+    border-top: 1px solid var(--rule);
+    font-size: 13px;
+    color: var(--ink-faint);
+  }
+  .meta b { color: var(--ink-soft); font-weight: 500; }
+
+  /* ---------- 見出し ---------- */
+
+  h2 {
+    font-size: 26px;
+    line-height: 1.3;
+    font-weight: 700;
+    letter-spacing: -0.015em;
+    margin: 64px 0 4px;
+    padding-top: 22px;
+    border-top: 1px solid var(--rule);
+    text-wrap: balance;
+    scroll-margin-top: 24px;
+  }
+  h2 .num {
+    display: block;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.14em;
+    color: var(--clay);
+    margin-bottom: 8px;
+  }
+
+  h3 {
+    font-size: 18px;
+    font-weight: 700;
+    margin: 34px 0 2px;
+    letter-spacing: -0.01em;
+    scroll-margin-top: 24px;
+  }
+
+  h4 {
+    font-size: 14px;
+    font-weight: 700;
+    margin: 24px 0 2px;
+    color: var(--ink-soft);
+  }
+
+  p { margin: 12px 0; }
+  p, li { overflow-wrap: break-word; }
+
+  a { color: var(--clay); text-decoration: none; border-bottom: 1px solid var(--clay-edge); }
+  a:hover { border-bottom-color: var(--clay); }
+  a:focus-visible { outline: 2px solid var(--clay); outline-offset: 3px; border-radius: 2px; }
+
+  ul, ol { margin: 12px 0; padding-left: 1.5em; }
+  li { margin: 4px 0; }
+  li::marker { color: var(--ink-faint); }
+
+  strong { font-weight: 700; }
+
+  code {
+    font-family: var(--mono);
+    font-size: 0.875em;
+    background: var(--clay-tint);
+    color: var(--clay-deep);
+    padding: 1px 5px;
+    border-radius: var(--r);
+  }
+
+  kbd {
+    font-family: var(--sans);
+    font-size: 12px;
+    background: var(--surface);
+    border: 1px solid var(--rule);
+    border-bottom-width: 2px;
+    border-radius: var(--r);
+    padding: 1px 6px;
+    color: var(--ink-soft);
+  }
+
+  /* ---------- 目次 ---------- */
+
+  .toc-label {
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.14em;
+    color: var(--ink-faint);
+    margin-bottom: 12px;
+  }
+  .toc ol { list-style: none; margin: 0; padding: 0; }
+  .toc a {
+    display: block;
+    font-size: 13.5px;
+    line-height: 1.45;
+    padding: 5px 10px 5px 12px;
+    color: var(--ink-soft);
+    border: 0;
+    border-left: 2px solid transparent;
+    border-radius: 0 var(--r) var(--r) 0;
+  }
+  .toc a:hover { background: var(--surface-alt); color: var(--ink); }
+  .toc a.on { color: var(--clay); border-left-color: var(--clay); background: var(--clay-tint); }
+
+  /* ---------- コールアウト（Notion の要） ---------- */
+
+  .callout {
+    display: grid;
+    grid-template-columns: 22px 1fr;
+    gap: 12px;
+    background: var(--surface-alt);
+    border: 1px solid var(--rule);
+    border-radius: 6px;
+    padding: 14px 16px;
+    margin: 20px 0;
+    font-size: 15px;
+  }
+  .callout .ico { font-size: 17px; line-height: 1.5; }
+  .callout > div > :first-child { margin-top: 0; }
+  .callout > div > :last-child { margin-bottom: 0; }
+
+  .callout.clay { background: var(--clay-tint); border-color: var(--clay-edge); }
+  .callout.warn { background: var(--warn-tint); border-color: color-mix(in srgb, var(--warn) 26%, transparent); }
+  .callout.stop { background: var(--stop-tint); border-color: color-mix(in srgb, var(--stop) 26%, transparent); }
+  .callout.good { background: var(--good-tint); border-color: color-mix(in srgb, var(--good) 26%, transparent); }
+
+  /* ---------- コード ---------- */
+
+  .code {
+    position: relative;
+    margin: 16px 0;
+    background: var(--surface-alt);
+    border: 1px solid var(--rule);
+    border-radius: 6px;
+  }
+  .code pre {
+    margin: 0;
+    padding: 16px 18px;
+    overflow-x: auto;
+    font-family: var(--mono);
+    font-size: 13.5px;
+    line-height: 1.65;
+    tab-size: 4;
+  }
+  .code pre code { background: none; color: var(--ink); padding: 0; font-size: inherit; }
+  .code .cm { color: var(--ink-faint); }
+  .code .kw { color: var(--clay); }
+  .code .st { color: var(--good); }
+
+  .copy {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    font-family: var(--sans);
+    font-size: 11.5px;
+    color: var(--ink-soft);
+    background: var(--surface);
+    border: 1px solid var(--rule);
+    border-radius: var(--r);
+    padding: 3px 9px;
+    cursor: pointer;
+    opacity: 0;
+    transition: opacity .12s ease;
+  }
+  .code:hover .copy, .copy:focus-visible { opacity: 1; }
+  .copy:hover { color: var(--clay); border-color: var(--clay-edge); }
+  .copy:focus-visible { outline: 2px solid var(--clay); outline-offset: 2px; }
+
+  /* ---------- 表 ---------- */
+
+  .tw { overflow-x: auto; margin: 18px 0; }
+  table {
+    border-collapse: collapse;
+    width: 100%;
+    font-size: 14px;
+    min-width: 460px;
+  }
+  th, td {
+    text-align: left;
+    padding: 9px 12px;
+    border-bottom: 1px solid var(--rule-soft);
+    vertical-align: top;
+  }
+  th {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--ink-soft);
+    border-bottom: 1px solid var(--rule);
+    white-space: nowrap;
+  }
+  td code { font-size: 13px; white-space: nowrap; }
+  .c { text-align: center; width: 42px; }
+  .yes { color: var(--good); font-weight: 700; }
+  .no  { color: var(--ink-faint); }
+  tbody tr:hover { background: var(--rule-soft); }
+
+  /* ---------- 権限セレクタ ---------- */
+
+  .tiers {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+    gap: 10px;
+    margin: 20px 0 8px;
+  }
+  .tier {
+    text-align: left;
+    font-family: var(--sans);
+    background: var(--surface);
+    border: 1px solid var(--rule);
+    border-radius: 6px;
+    padding: 13px 15px;
+    cursor: pointer;
+    color: var(--ink);
+    transition: border-color .12s ease, background .12s ease;
+  }
+  .tier:hover { border-color: var(--clay-edge); }
+  .tier:focus-visible { outline: 2px solid var(--clay); outline-offset: 2px; }
+  .tier[aria-pressed="true"] { border-color: var(--clay); background: var(--clay-tint); }
+  .tier .t-n {
+    font-size: 11px; font-weight: 600; letter-spacing: .1em;
+    color: var(--ink-faint); display: block;
+  }
+  .tier[aria-pressed="true"] .t-n { color: var(--clay); }
+  .tier .t-f {
+    font-family: var(--mono); font-size: 13px; font-weight: 700;
+    display: block; margin: 3px 0 1px;
+  }
+  .tier .t-d { font-size: 12.5px; color: var(--ink-soft); line-height: 1.5; }
+
+  /* 選択した階層に応じて「使えません」を出す */
+  .locked {
+    display: none;
+    align-items: center;
+    gap: 7px;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--stop);
+    background: var(--stop-tint);
+    border: 1px solid color-mix(in srgb, var(--stop) 26%, transparent);
+    border-radius: var(--r);
+    padding: 7px 11px;
+    margin: 12px 0;
+  }
+  :root[data-tier="r"]  .locked[data-need="rw"],
+  :root[data-tier="r"]  .locked[data-need="admin"],
+  :root[data-tier="rw"] .locked[data-need="admin"] { display: flex; }
+
+  /* 表の行も同様にトーンを落とす */
+  :root[data-tier="r"]  tr[data-need="rw"] td,
+  :root[data-tier="r"]  tr[data-need="admin"] td,
+  :root[data-tier="rw"] tr[data-need="admin"] td { opacity: .42; }
+
+  /* ---------- 細部 ---------- */
+
+  .steps { counter-reset: s; list-style: none; padding: 0; margin: 20px 0; }
+  .steps > li {
+    counter-increment: s;
+    position: relative;
+    padding-left: 40px;
+    margin: 0 0 22px;
+  }
+  .steps > li::before {
+    content: counter(s);
+    position: absolute;
+    left: 0; top: 2px;
+    width: 25px; height: 25px;
+    display: grid; place-items: center;
+    background: var(--clay); color: #fff;
+    border-radius: 50%;
+    font-size: 13px; font-weight: 700;
+    font-variant-numeric: tabular-nums;
+  }
+  .steps > li > :first-child { margin-top: 0; }
+  .steps h3 { margin-top: 0; font-size: 16px; }
+
+  .files {
+    font-family: var(--mono); font-size: 13px; line-height: 1.9;
+    background: var(--surface-alt); border: 1px solid var(--rule);
+    border-radius: 6px; padding: 14px 18px; margin: 16px 0;
+    overflow-x: auto;
+  }
+  .files .d { color: var(--ink-faint); }
+
+  .err {
+    border: 1px solid var(--rule);
+    border-radius: 6px;
+    margin: 14px 0;
+    overflow: hidden;
+  }
+  .err summary {
+    cursor: pointer;
+    padding: 11px 15px;
+    font-size: 14.5px;
+    font-family: var(--mono);
+    color: var(--stop);
+    background: var(--surface-alt);
+    list-style: none;
+  }
+  .err summary::-webkit-details-marker { display: none; }
+  .err summary::before { content: "▸ "; color: var(--ink-faint); }
+  .err[open] summary::before { content: "▾ "; }
+  .err summary:hover { background: var(--stop-tint); }
+  .err summary:focus-visible { outline: 2px solid var(--clay); outline-offset: -2px; }
+  .err .body { padding: 4px 15px 14px; font-size: 15px; border-top: 1px solid var(--rule); }
+  .err .body > :first-child { margin-top: 12px; }
+  .err .body > :last-child { margin-bottom: 0; }
+
+  hr { border: 0; border-top: 1px solid var(--rule); margin: 56px 0; }
+
+  .foot {
+    margin-top: 64px; padding-top: 20px;
+    border-top: 1px solid var(--rule);
+    font-size: 13px; color: var(--ink-faint);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    * { transition: none !important; scroll-behavior: auto !important; }
+  }
+  html { scroll-behavior: smooth; }
+</style>
+
+<div class="page">
+
+  <nav class="toc" aria-label="目次">
+    <div class="toc-label">目次</div>
+    <ol>
+      <li><a href="#what">これは何か</a></li>
+      <li><a href="#setup">準備する</a></li>
+      <li><a href="#tier">自分の権限を確認する</a></li>
+      <li><a href="#basic">データを取り出す</a></li>
+      <li><a href="#write">データを書き込む</a></li>
+      <li><a href="#admin">テーブルを作る・調べる</a></li>
+      <li><a href="#ref">関数リファレンス</a></li>
+      <li><a href="#types">型の対応</a></li>
+      <li><a href="#errors">エラーが出たら</a></li>
+      <li><a href="#limits">知っておくこと</a></li>
+    </ol>
+  </nav>
+
+  <main class="main">
+   <div class="col">
+
+    <header class="masthead">
+      <span class="page-icon" role="img" aria-label="アヒル">🦆</span>
+      <h1>dackdb 使い方マニュアル</h1>
+      <p class="lede">Excel の VBA から DuckDB のデータベース（<code>dack.db</code>）を読み書きするためのモジュールです。数十万行を 1 秒かからずシートに展開できます。</p>
+      <div class="meta">
+        <span><b>対象</b> 64bit 版 Excel</span>
+        <span><b>用意するもの</b> DLL 1 ファイルと .bas 1 ファイル</span>
+        <span><b>前提知識</b> VBA の基本</span>
+      </div>
+    </header>
+
+    <h2 id="what"><span class="num">はじめに</span>これは何か</h2>
+
+    <p>DuckDB は 1 つのファイルにデータを収める分析用データベースです。Excel の 104 万行の壁を超える量のデータを置いておき、必要な分だけ SQL で絞り込んでシートに取り出す、という使い方ができます。</p>
+
+    <p>このモジュールは、その DuckDB を VBA から直接呼び出せるようにするものです。<strong>配布された DLL によって、あなたができる操作の範囲が決まります。</strong></p>
+
+    <div class="callout clay">
+      <span class="ico" role="img" aria-label="ポイント">💡</span>
+      <div><p><strong>日本語がそのまま扱えます。</strong>テーブル名・列名・データのいずれにも日本語を使えて、文字化けしません。<code>𠮷</code> のようなサロゲートペアや絵文字も含みます。ODBC 接続を使った方法だとここが壊れますが、このモジュールでは起きません。</p></div>
+    </div>
+
+    <h2 id="setup"><span class="num">ステップ 1</span>準備する</h2>
+
+    <p>初回だけ必要な作業です。3 つのステップで終わります。</p>
+
+    <ol class="steps">
+      <li>
+        <h3>ファイルを置く</h3>
+        <p>配布された DLL を、ブックと同じ場所の <code>dll</code> フォルダに入れます。フォルダ名や場所は自由ですが、以下の説明はこの配置を前提にします。</p>
+        <div class="files">
+売上管理.xlsm<br>
+<span class="d">dll\</span>dackdb_r.dll　　<span class="d">← 配布された DLL を 1 つ</span>
+        </div>
+      </li>
+
+      <li>
+        <h3>モジュールを読み込む</h3>
+        <p>Excel で <kbd>Alt</kbd> + <kbd>F11</kbd> を押して VBE を開き、メニューの「ファイル」→「ファイルのインポート」から、DLL に対応する <code>.bas</code> ファイルを選びます。</p>
+        <div class="tw">
+        <table>
+          <thead><tr><th>配布された DLL</th><th>読み込む .bas</th></tr></thead>
+          <tbody>
+            <tr><td><code>dackdb_r.dll</code></td><td><code>DackDbR.bas</code></td></tr>
+            <tr><td><code>dackdb_rw.dll</code></td><td><code>DackDbRW.bas</code></td></tr>
+            <tr><td><code>dackdb_admin.dll</code></td><td><code>DackDbAdmin.bas</code></td></tr>
+          </tbody>
+        </table>
+        </div>
+      </li>
+
+      <li>
+        <h3>ブックを開いたときに初期化する</h3>
+        <p>VBE の左側で「ThisWorkbook」をダブルクリックし、次のコードを貼り付けます。ブックを開くたびに自動で実行されます。</p>
+        <div class="code">
+          <button class="copy" type="button">コピー</button>
+<pre><code><span class="kw">Private Sub</span> Workbook_Open()
+    DackDbInit ThisWorkbook.Path &amp; <span class="st">"\dll"</span>
+<span class="kw">End Sub</span></code></pre>
+        </div>
+        <p>これで準備完了です。ブックを保存して開き直してください。</p>
+      </li>
+    </ol>
+
+    <div class="callout warn">
+      <span class="ico" role="img" aria-label="注意">⚠️</span>
+      <div><p><strong>32bit 版の Excel では動きません。</strong>「ファイル」→「アカウント」→「Excel のバージョン情報」で確認できます。32bit 版だった場合は初期化時にその旨のエラーが出ます。</p></div>
+    </div>
+
+    <h2 id="tier"><span class="num">ステップ 2</span>自分の権限を確認する</h2>
+
+    <p>DLL は 3 種類あり、できる操作が違います。<strong>下のボタンで、あなたが配布された DLL を選んでください。</strong>このページ全体が、その権限でできることに合わせて表示されます。</p>
+
+    <div class="tiers" role="group" aria-label="使用している DLL を選択">
+      <button class="tier" type="button" data-tier="r" aria-pressed="false">
+        <span class="t-n">① 読み取り専用</span>
+        <span class="t-f">dackdb_r.dll</span>
+        <span class="t-d">データを見るだけ。誤ってデータを壊す心配がありません。</span>
+      </button>
+      <button class="tier" type="button" data-tier="rw" aria-pressed="true">
+        <span class="t-n">② 読み書き可</span>
+        <span class="t-f">dackdb_rw.dll</span>
+        <span class="t-d">データの追加・更新・削除ができます。表の構造は変えられません。</span>
+      </button>
+      <button class="tier" type="button" data-tier="admin" aria-pressed="false">
+        <span class="t-n">③ 管理者</span>
+        <span class="t-f">dackdb_admin.dll</span>
+        <span class="t-d">データベースやテーブルの作成・削除まで、すべてできます。</span>
+      </button>
+    </div>
+
+    <p>分からない場合は、次のコードを実行すると自分の権限が表示されます。</p>
+
+    <div class="code">
+      <button class="copy" type="button">コピー</button>
+<pre><code><span class="kw">Sub</span> 権限を確認()
+    MsgBox DackVersion()
+<span class="kw">End Sub</span>
+
+<span class="cm">' 表示例:
+' dackdb 0.1.0 / DuckDB v1.5.5 / 権限: READ_WRITE (読み書き可（DDL 不可）)</span></code></pre>
+    </div>
+
+    <div class="callout">
+      <span class="ico" role="img" aria-label="メモ">📝</span>
+      <div><p>権限外の操作を書いても、VBA のコードとしては正しく書けます。実行したときに<strong>「どの DLL を使えばよいか」を伝えるエラー</strong>が出ます。上位の DLL を渡されれば、コードを 1 文字も直さずそのまま動きます。</p></div>
+    </div>
+
+    <h2 id="basic"><span class="num">ステップ 3</span>データを取り出す</h2>
+
+    <h3>いちばん短い例</h3>
+
+    <p>データベースを開き、SQL の結果をシートに貼り、閉じる。これが基本形です。</p>
+
+    <div class="code">
+      <button class="copy" type="button">コピー</button>
+<pre><code><span class="kw">Sub</span> 営業部の売上を取得()
+    <span class="kw">Dim</span> h <span class="kw">As LongLong</span>
+    h = OpenDb(<span class="st">"C:\data\dack.db"</span>)
+
+    <span class="kw">Dim</span> n <span class="kw">As Long</span>
+    n = QueryToSheet(h, <span class="st">"SELECT * FROM 売上 WHERE 部署 = '営業部'"</span>, _
+                     Sheet1.Range(<span class="st">"A1"</span>))
+
+    CloseDb h
+    MsgBox n &amp; <span class="st">" 件貼り付けました"</span>
+<span class="kw">End Sub</span></code></pre>
+    </div>
+
+    <p><code>QueryToSheet</code> は 1 行目に列名、2 行目以降にデータを貼り付け、<strong>データの行数</strong>（列名の行を除いた数）を返します。10 万行でも一瞬で終わります。</p>
+
+    <div class="callout stop">
+      <span class="ico" role="img" aria-label="必須">🔒</span>
+      <div><p><strong><code>CloseDb</code> を忘れないでください。</strong>閉じないとファイルがロックされたままになり、他の人がそのデータベースを開けなくなります。エラーが起きても必ず閉じたい場合は、下の「安全な書き方」を参考にしてください。</p></div>
+    </div>
+
+    <h3>配列として受け取る</h3>
+
+    <p>シートに貼らず、VBA の中で処理したいときは <code>Query</code> を使います。</p>
+
+    <div class="code">
+      <button class="copy" type="button">コピー</button>
+<pre><code><span class="kw">Dim</span> arr <span class="kw">As Variant</span>
+arr = Query(h, <span class="st">"SELECT 部署, 金額 FROM 売上"</span>)
+
+<span class="cm">' arr(1, 1) = "部署"　　← 1 行目は必ず列名
+' arr(1, 2) = "金額"
+' arr(2, 1) = "営業部"　← 2 行目からがデータ
+' arr(2, 2) = 1000</span>
+
+<span class="kw">Dim</span> i <span class="kw">As Long</span>, 合計 <span class="kw">As Double</span>
+<span class="kw">For</span> i = 2 <span class="kw">To</span> UBound(arr, 1)
+    <span class="kw">If Not</span> IsNull(arr(i, 2)) <span class="kw">Then</span> 合計 = 合計 + arr(i, 2)
+<span class="kw">Next</span></code></pre>
+    </div>
+
+    <p>データが 0 件のときは列名の行だけが返るので、<code>UBound(arr, 1) = 1</code> で判定できます。データベースの <code>NULL</code> は <code>IsNull()</code> で判定でき、シートに貼ると空欄になります。</p>
+
+    <h3>シートの値を条件に使うとき</h3>
+
+    <div class="callout stop">
+      <span class="ico" role="img" aria-label="重要">🛡️</span>
+      <div>
+        <p><strong>SQL に文字列を連結しないでください。</strong>セルに <code>' OR 1=1; DROP TABLE 売上; --</code> のような値が入っていると、意図しない SQL が実行されてしまいます。</p>
+        <p>代わりに <code>QueryP</code> を使い、値を <code>?</code> の位置に渡します。渡した値は必ず「ただの値」として扱われ、SQL として解釈されることはありません。</p>
+      </div>
+    </div>
+
+    <div class="code">
+      <button class="copy" type="button">コピー</button>
+<pre><code><span class="cm">' ✗ 危険：セルの内容が SQL の一部になってしまう</span>
+arr = Query(h, <span class="st">"SELECT * FROM 売上 WHERE 部署 = '"</span> &amp; Range(<span class="st">"B1"</span>).Value &amp; <span class="st">"'"</span>)
+
+<span class="cm">' ✓ 安全：? に値として渡る</span>
+arr = QueryP(h, <span class="st">"SELECT * FROM 売上 WHERE 部署 = ? AND 金額 &gt; ?"</span>, _
+             Array(Range(<span class="st">"B1"</span>).Value, 1000))</code></pre>
+    </div>
+
+    <p>渡し方は <code>Array(値1, 値2)</code> でも <code>Range("A1:C1").Value</code> でも構いません。縦並びの範囲（<code>Range("A1:A3").Value</code>）も受け付けます。</p>
+
+    <h3>安全な書き方（エラーが起きても必ず閉じる）</h3>
+
+    <div class="code">
+      <button class="copy" type="button">コピー</button>
+<pre><code><span class="kw">Sub</span> 売上を取得()
+    <span class="kw">Dim</span> h <span class="kw">As LongLong</span>
+    <span class="kw">On Error GoTo</span> 後始末
+
+    h = OpenDb(<span class="st">"C:\data\dack.db"</span>)
+    QueryToSheet h, <span class="st">"SELECT * FROM 売上"</span>, Sheet1.Range(<span class="st">"A1"</span>)
+
+後始末:
+    <span class="kw">If</span> h &lt;&gt; 0 <span class="kw">Then</span> CloseDb h
+    <span class="kw">If</span> Err.Number &lt;&gt; 0 <span class="kw">Then</span> MsgBox Err.Description, vbExclamation
+<span class="kw">End Sub</span></code></pre>
+    </div>
+
+    <h2 id="write"><span class="num">ステップ 4</span>データを書き込む</h2>
+
+    <div class="locked" data-need="rw">
+      <span role="img" aria-label="使えません">🔒</span>
+      読み取り専用の DLL では、この章の操作はできません。<code>dackdb_rw.dll</code> が必要です。
+    </div>
+
+    <h3>シートの範囲をまとめて追加する</h3>
+
+    <p>Excel から DB へデータを入れる、いちばん速い方法です。2 万行で 0.04 秒ほどで終わります。</p>
+
+    <div class="code">
+      <button class="copy" type="button">コピー</button>
+<pre><code><span class="kw">Dim</span> n <span class="kw">As LongLong</span>
+n = AppendRange(h, <span class="st">"売上"</span>, Sheet1.Range(<span class="st">"A2:D10000"</span>).Value)</code></pre>
+    </div>
+
+    <p>使うときの決まりは 3 つです。</p>
+
+    <ul>
+      <li><strong>見出しの行は含めない。</strong>データの行だけの範囲を渡します（上の例では 1 行目が見出しなので <code>A2</code> から）。</li>
+      <li><strong>列の並び順をテーブルに合わせる。</strong>1 列目がテーブルの 1 列目に入ります。列数が違うとエラーになります。</li>
+      <li><strong>途中で失敗したら 1 行も入りません。</strong>「1000 行目でエラー、でも 999 行は入った」という中途半端な状態にはなりません。</li>
+    </ul>
+
+    <div class="callout warn">
+      <span class="ico" role="img" aria-label="注意">⚠️</span>
+      <div><p>範囲に <code>#N/A</code> や <code>#DIV/0!</code> などのエラー値のセルがあると、<strong>その位置を示してエラーになります</strong>（例:「3 行 2 列目: セルがエラー値です」）。空欄として扱いたい場合は <code>IFERROR</code> で空にしてから渡してください。エラー値を勝手に空欄に変えてしまうと、気づかないうちにデータが壊れるためです。</p></div>
+    </div>
+
+    <h3>1 件ずつ追加・更新・削除する</h3>
+
+    <div class="code">
+      <button class="copy" type="button">コピー</button>
+<pre><code><span class="cm">' 影響した行数が返る</span>
+<span class="kw">Dim</span> n <span class="kw">As LongLong</span>
+
+n = Exec(h, <span class="st">"DELETE FROM 売上 WHERE 日付 &lt; DATE '2020-01-01'"</span>)
+
+<span class="cm">' セルの値を使うときは ExecP（? に値が入る）</span>
+n = ExecP(h, <span class="st">"UPDATE 売上 SET 金額 = ? WHERE id = ?"</span>, _
+          Array(Range(<span class="st">"B1"</span>).Value, 3))</code></pre>
+    </div>
+
+    <h3>まとめて実行して、失敗したら全部取り消す</h3>
+
+    <div class="code">
+      <button class="copy" type="button">コピー</button>
+<pre><code>BeginTx h
+<span class="kw">On Error GoTo</span> 取消
+
+Exec h, <span class="st">"DELETE FROM 売上 WHERE 年度 = 2023"</span>
+AppendRange h, <span class="st">"売上"</span>, Sheet1.Range(<span class="st">"A2:D5000"</span>).Value
+
+CommitTx h
+<span class="kw">Exit Sub</span>
+
+取消:
+RollbackTx h
+MsgBox <span class="st">"取り消しました: "</span> &amp; Err.Description</code></pre>
+    </div>
+
+    <h2 id="admin"><span class="num">ステップ 5</span>テーブルを作る・調べる</h2>
+
+    <div class="locked" data-need="admin">
+      <span role="img" aria-label="使えません">🔒</span>
+      この章の操作には <code>dackdb_admin.dll</code>（管理者）が必要です。
+    </div>
+
+    <h3>新しいデータベースを作る</h3>
+
+    <div class="code">
+      <button class="copy" type="button">コピー</button>
+<pre><code><span class="kw">Dim</span> h <span class="kw">As LongLong</span>
+h = CreateDb(<span class="st">"C:\data\新規.db"</span>)   <span class="cm">' 既にファイルがあるとエラー</span>
+
+ExecDDL h, <span class="st">"CREATE TABLE 売上 (" &amp; _
+    "id INTEGER PRIMARY KEY, " &amp; _
+    "部署 VARCHAR NOT NULL, " &amp; _
+    "金額 BIGINT, " &amp; _
+    "日付 DATE)"</span>
+
+CloseDb h</code></pre>
+    </div>
+
+    <p>既存ファイルを黙って上書きしないよう、<code>CreateDb</code> はファイルが既にある場合エラーにします。開き直したいときは <code>OpenDb</code> を使ってください。</p>
+
+    <h3>今の構造を調べる</h3>
+
+    <div class="code">
+      <button class="copy" type="button">コピー</button>
+<pre><code><span class="cm">' テーブルの一覧</span>
+Sheet2.Range(<span class="st">"A1"</span>).Resize(100, 3).Value = ListTables(h)
+
+<span class="cm">' 1 つのテーブルの列定義</span>
+<span class="kw">Dim</span> d <span class="kw">As Variant</span>
+d = Describe(h, <span class="st">"売上"</span>)
+
+<span class="cm">' 全テーブルの列＋主キー情報をシートに（管理者のみ）</span>
+<span class="kw">Dim</span> s <span class="kw">As Variant</span>
+s = ExportSchema(h, <span class="st">"table"</span>)
+Sheet3.Range(<span class="st">"A1"</span>).Resize(UBound(s, 1), UBound(s, 2)).Value = s
+
+<span class="cm">' CREATE 文をそのまま文字列で取り出す</span>
+MsgBox ExportSchema(h, <span class="st">"ddl"</span>)</code></pre>
+    </div>
+
+    <h2 id="ref"><span class="num">早見表</span>関数リファレンス</h2>
+
+    <p>選択中の権限で使えない関数は薄く表示されます。</p>
+
+    <div class="tw">
+    <table>
+      <thead>
+        <tr><th>関数</th><th>返すもの</th><th>説明</th></tr>
+      </thead>
+      <tbody>
+        <tr><td><code>DackDbInit(フォルダ)</code></td><td>—</td><td>DLL を読み込む。ブックを開いたときに一度だけ</td></tr>
+        <tr><td><code>DackVersion()</code></td><td>文字列</td><td>版数と自分の権限</td></tr>
+        <tr><td><code>DackCapabilities()</code></td><td>文字列</td><td>使える関数の一覧</td></tr>
+        <tr><td><code>OpenDb(パス)</code></td><td>ハンドル</td><td>データベースを開く</td></tr>
+        <tr><td><code>CloseDb(h)</code></td><td>—</td><td>閉じる。必ず呼ぶこと</td></tr>
+        <tr><td><code>Query(h, sql)</code></td><td>2 次元配列</td><td>SELECT の結果。1 行目は列名</td></tr>
+        <tr><td><code>QueryP(h, sql, 値)</code></td><td>2 次元配列</td><td>同上。<code>?</code> に値を渡す安全な形</td></tr>
+        <tr><td><code>QueryToSheet(h, sql, セル)</code></td><td>行数</td><td>結果をシートに直接貼る</td></tr>
+        <tr><td><code>ListTables(h)</code></td><td>2 次元配列</td><td>テーブル一覧</td></tr>
+        <tr><td><code>Describe(h, 表名)</code></td><td>2 次元配列</td><td>列定義</td></tr>
+        <tr data-need="rw"><td><code>Exec(h, sql)</code></td><td>影響行数</td><td>追加・更新・削除</td></tr>
+        <tr data-need="rw"><td><code>ExecP(h, sql, 値)</code></td><td>影響行数</td><td>同上。<code>?</code> に値を渡す安全な形</td></tr>
+        <tr data-need="rw"><td><code>AppendRange(h, 表名, 範囲)</code></td><td>投入行数</td><td>シート範囲を一括投入。最速</td></tr>
+        <tr data-need="rw"><td><code>BeginTx(h)</code></td><td>—</td><td>まとめ処理の開始</td></tr>
+        <tr data-need="rw"><td><code>CommitTx(h)</code></td><td>—</td><td>確定</td></tr>
+        <tr data-need="rw"><td><code>RollbackTx(h)</code></td><td>—</td><td>取り消し</td></tr>
+        <tr data-need="admin"><td><code>CreateDb(パス)</code></td><td>ハンドル</td><td>新しいデータベースを作る</td></tr>
+        <tr data-need="admin"><td><code>ExecDDL(h, sql)</code></td><td>—</td><td>テーブルの作成・削除・変更</td></tr>
+        <tr data-need="admin"><td><code>ExportSchema(h, 形式)</code></td><td>配列 / 文字列</td><td><code>"table"</code> か <code>"ddl"</code></td></tr>
+        <tr data-need="admin"><td><code>Checkpoint(h)</code></td><td>—</td><td>変更をディスクに確定</td></tr>
+      </tbody>
+    </table>
+    </div>
+
+    <h2 id="types"><span class="num">参考</span>型の対応</h2>
+
+    <p>データベースの型が Excel でどう見えるかの一覧です。ふだんは意識しなくて構いません。</p>
+
+    <div class="tw">
+    <table>
+      <thead><tr><th>データベース側</th><th>Excel / VBA</th><th>備考</th></tr></thead>
+      <tbody>
+        <tr><td>NULL</td><td><code>Null</code></td><td>セルは空欄。<code>IsNull()</code> で判定</td></tr>
+        <tr><td>BOOLEAN</td><td><code>Boolean</code></td><td></td></tr>
+        <tr><td>INTEGER など</td><td><code>Long</code></td><td></td></tr>
+        <tr><td>BIGINT</td><td><code>LongLong</code></td><td></td></tr>
+        <tr><td>DOUBLE / FLOAT</td><td><code>Double</code></td><td></td></tr>
+        <tr><td>DECIMAL（18 桁以下）</td><td><code>Double</code></td><td>金額列。<code>SUM()</code> が使えます</td></tr>
+        <tr><td>DECIMAL（19 桁以上）</td><td><code>String</code></td><td>誤差を出さないため文字列に</td></tr>
+        <tr><td>VARCHAR</td><td><code>String</code></td><td>日本語がそのまま入ります</td></tr>
+        <tr><td>DATE / TIMESTAMP</td><td><code>Date</code></td><td>1900 年より前は文字列に</td></tr>
+        <tr><td>HUGEINT / UUID</td><td><code>String</code></td><td>桁が落ちないよう文字列に</td></tr>
+        <tr><td>BLOB</td><td><code>Byte()</code></td><td></td></tr>
+        <tr><td>LIST / STRUCT など</td><td>—</td><td>エラーになります。下記参照</td></tr>
+      </tbody>
+    </table>
+    </div>
+
+    <div class="callout">
+      <span class="ico" role="img" aria-label="メモ">📝</span>
+      <div><p>LIST や STRUCT のような入れ子の型は、セルに入れられないためエラーになります。SQL で文字列に変換すれば取り出せます。<br><code>SELECT 明細::VARCHAR FROM 注文</code></p></div>
+    </div>
+
+    <h2 id="errors"><span class="num">困ったとき</span>エラーが出たら</h2>
+
+    <p>エラーメッセージは日本語で、対処方法まで書かれています。よく出るものを挙げます。</p>
+
+    <details class="err">
+      <summary>DLL が見つかりません: ...\dackdb_r.dll</summary>
+      <div class="body">
+        <p><code>DackDbInit</code> に渡したフォルダに DLL が入っていません。フォルダのパスと、DLL のファイル名が一致しているか確認してください。</p>
+        <p>ブックと同じ場所の <code>dll</code> フォルダに置いた場合は <code>DackDbInit ThisWorkbook.Path &amp; "\dll"</code> です。</p>
+      </div>
+    </details>
+
+    <details class="err">
+      <summary>このモジュールは 64bit 版 Excel 専用です</summary>
+      <div class="body">
+        <p>32bit 版の Excel では動きません。「ファイル」→「アカウント」→「Excel のバージョン情報」でご確認のうえ、情報システム部門にご相談ください。</p>
+      </div>
+    </details>
+
+    <details class="err">
+      <summary>【権限エラー】DackExecute はこの DLL では使えません</summary>
+      <div class="body">
+        <p>読み取り専用の DLL でデータを書き込もうとしています。書き込みには <code>dackdb_rw.dll</code>、テーブルの作成には <code>dackdb_admin.dll</code> が必要です。</p>
+        <p>メッセージの続きに、必要な DLL の名前が書かれています。配布元にご相談ください。</p>
+      </div>
+    </details>
+
+    <details class="err">
+      <summary>データベースファイルが見つかりません: C:\data\dack.db</summary>
+      <div class="body">
+        <p>パスが間違っているか、ファイルがまだ作られていません。読み取り専用の DLL は新しいファイルを作れないので、その場合は管理者の DLL で <code>CreateDb</code> を使う必要があります。</p>
+      </div>
+    </details>
+
+    <details class="err">
+      <summary>IO Error: ... 別のプロセスが使用中です</summary>
+      <div class="body">
+        <p><strong>同じ Excel の中で、同じファイルを 2 回開こうとしています。</strong>これはできません。</p>
+        <p>先に開いたほうを <code>CloseDb</code> してから、開き直してください。前のマクロがエラーで途中終了して閉じ忘れている、というのがよくある原因です。Excel を再起動すれば必ず解消します。</p>
+      </div>
+    </details>
+
+    <details class="err">
+      <summary>接続ハンドル 0 は無効です</summary>
+      <div class="body">
+        <p><code>OpenDb</code> が成功していないか、既に <code>CloseDb</code> したハンドルを使っています。<code>OpenDb</code> の行より前で処理が止まっていないか確認してください。</p>
+      </div>
+    </details>
+
+    <details class="err">
+      <summary>この DLL は読み書き可（READ_WRITE）です。DROP（削除）は実行できません</summary>
+      <div class="body">
+        <p>テーブルそのものを消す・作る・変える操作には管理者の DLL が必要です。データの削除（<code>DELETE</code>）は読み書き可の DLL でできます。</p>
+      </div>
+    </details>
+
+    <details class="err">
+      <summary>3 行 2 列目: セルがエラー値（#N/A、#DIV/0! など）です</summary>
+      <div class="body">
+        <p><code>AppendRange</code> に渡した範囲にエラー値のセルがあります。示された位置のセルを直すか、<code>IFERROR</code> で空欄にしてから渡してください。</p>
+        <p>エラー値を自動で空欄に変換していないのは、気づかないうちにデータが欠けるのを防ぐためです。</p>
+      </div>
+    </details>
+
+    <details class="err">
+      <summary>テーブル「売上」は 4 列ですが、渡された範囲は 3 列です</summary>
+      <div class="body">
+        <p><code>AppendRange</code> に渡す範囲の列数を、テーブルの列数に合わせてください。<code>Describe(h, "売上")</code> で列の並び順を確認できます。見出し行を含めてしまっていないかも確認してください。</p>
+      </div>
+    </details>
+
+    <details class="err">
+      <summary>結果が 2000000 行あり、Excel シートの上限を超えています</summary>
+      <div class="body">
+        <p>SQL に <code>LIMIT</code> を付けて絞り込むか、<code>WHERE</code> で条件を足してください。集計してから取り出す（<code>GROUP BY</code>）のも有効です。</p>
+      </div>
+    </details>
+
+    <details class="err">
+      <summary>SQL の構文エラー: ...</summary>
+      <div class="body">
+        <p>SQL の書き方に誤りがあります。メッセージの後半にデータベースからの指摘がそのまま入っているので、そこを手がかりに直してください。日本語のテーブル名や列名は、そのまま書けます。</p>
+      </div>
+    </details>
+
+    <h2 id="limits"><span class="num">最後に</span>知っておくこと</h2>
+
+    <h3>同じファイルは同時に開けません</h3>
+    <p>1 つの Excel の中で、同じ <code>dack.db</code> を 2 つのハンドルで開くことはできません。必ず片方を閉じてから開いてください。別の Excel（別プロセス）から読み取り目的で開くことは可能です。</p>
+
+    <h3>DLL の分割は「うっかり」を防ぐためのものです</h3>
+    <p>読み取り専用の DLL を配ることで、操作ミスによるデータの破損を防げます。ただしこれは<strong>セキュリティのための仕組みではありません</strong>。管理者用の DLL を入手した人は何でもできます。厳密に制限する必要がある場合は、データベースファイル自体に Windows の読み取り専用権限を設定してください。</p>
+
+    <h3>大きなデータの扱い方</h3>
+    <p>DuckDB 側は数千万行を扱えますが、Excel のシートは 104 万行までです。全件を取り出すのではなく、<strong>SQL で絞り込む・集計してから取り出す</strong>のがこのモジュールの本来の使い方です。</p>
+
+    <div class="code">
+      <button class="copy" type="button">コピー</button>
+<pre><code><span class="cm">' 全件取り出してから Excel で集計する（遅い・上限に当たる）</span>
+arr = Query(h, <span class="st">"SELECT * FROM 売上"</span>)
+
+<span class="cm">' データベース側で集計してから取り出す（速い）</span>
+arr = Query(h, <span class="st">"SELECT 部署, SUM(金額) AS 合計 " &amp; _
+                "FROM 売上 GROUP BY 部署 ORDER BY 合計 DESC"</span>)</code></pre>
+    </div>
+
+    <div class="foot">
+      dackdb 0.1.0 ／ DuckDB v1.5.5 ／ 64bit Excel 専用<br>
+      不具合や要望は、実行した SQL とエラーメッセージを添えて配布元までお知らせください。
+    </div>
+
+   </div>
+  </main>
+</div>
+
+<script>
+(function () {
+  "use strict";
+
+  /* 権限セレクタ ------------------------------------------------------- */
+  var root = document.documentElement;
+  var buttons = Array.prototype.slice.call(document.querySelectorAll(".tier"));
+
+  function setTier(tier) {
+    root.setAttribute("data-tier", tier);
+    buttons.forEach(function (b) {
+      b.setAttribute("aria-pressed", String(b.dataset.tier === tier));
+    });
+    try { localStorage.setItem("dackdb-tier", tier); } catch (e) { /* 無視 */ }
+  }
+
+  buttons.forEach(function (b) {
+    b.addEventListener("click", function () { setTier(b.dataset.tier); });
+  });
+
+  var saved = null;
+  try { saved = localStorage.getItem("dackdb-tier"); } catch (e) { /* 無視 */ }
+  setTier(saved === "r" || saved === "rw" || saved === "admin" ? saved : "rw");
+
+  /* コードのコピー ----------------------------------------------------- */
+  document.querySelectorAll(".copy").forEach(function (btn) {
+    btn.addEventListener("click", function () {
+      var pre = btn.parentElement.querySelector("pre");
+      if (!pre) return;
+      var text = pre.innerText;
+      var done = function () {
+        btn.textContent = "コピーしました";
+        setTimeout(function () { btn.textContent = "コピー"; }, 1600);
+      };
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(text).then(done, function () {
+          btn.textContent = "コピーできません";
+          setTimeout(function () { btn.textContent = "コピー"; }, 1600);
+        });
+      } else {
+        var ta = document.createElement("textarea");
+        ta.value = text;
+        ta.style.position = "fixed";
+        ta.style.opacity = "0";
+        document.body.appendChild(ta);
+        ta.select();
+        try { document.execCommand("copy"); done(); } catch (e) { /* 無視 */ }
+        document.body.removeChild(ta);
+      }
+    });
+  });
+
+  /* 目次の現在位置 ----------------------------------------------------- */
+  var links = Array.prototype.slice.call(document.querySelectorAll(".toc a"));
+  var targets = links
+    .map(function (a) { return document.querySelector(a.getAttribute("href")); })
+    .filter(Boolean);
+
+  if ("IntersectionObserver" in window && targets.length) {
+    var visible = new Map();
+    var io = new IntersectionObserver(function (entries) {
+      entries.forEach(function (e) { visible.set(e.target.id, e.isIntersecting); });
+      var current = null;
+      targets.forEach(function (t) { if (visible.get(t.id) && !current) current = t.id; });
+      if (!current) return;
+      links.forEach(function (a) {
+        a.classList.toggle("on", a.getAttribute("href") === "#" + current);
+      });
+    }, { rootMargin: "0px 0px -72% 0px" });
+    targets.forEach(function (t) { io.observe(t); });
+  }
+})();
+</script>
