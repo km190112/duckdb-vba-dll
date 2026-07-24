@@ -501,6 +501,7 @@
       <li><a href="#basic">データを取り出す</a></li>
       <li><a href="#write">データを書き込む</a></li>
       <li><a href="#design">テーブルを設計する</a></li>
+      <li><a href="#view">ビューを登録する</a></li>
       <li><a href="#index">インデックス</a></li>
       <li><a href="#alter">構造を変える</a></li>
       <li><a href="#inspect">構造を調べる</a></li>
@@ -774,6 +775,21 @@ arr = QueryP(h, <span class="st">"SELECT * FROM 売上 WHERE 部署 = ? AND 金�
 
     <p>渡し方は <code>Array(値1, 値2)</code> でも <code>Range("A1:C1").Value</code> でも構いません。縦並びの範囲（<code>Range("A1:A3").Value</code>）も受け付けます。</p>
 
+    <p><code>?</code> は<strong>いくつ並べても構いません</strong>。複合主キー（複数列の主キー）の検索も、渡す値の順に対応します。</p>
+
+    <div class="code">
+      <button class="copy" type="button">コピー</button>
+<pre><code><span class="cm">' 社員番号 + 日付 が主キーの勤怠テーブルを 1 件だけ狙う</span>
+arr = QueryP(h, <span class="st">"SELECT * FROM 勤怠 WHERE 社員番号 = ? AND 日付 = ?"</span>, _
+             Array(101, <span class="st">"2024-01-15"</span>))
+
+<span class="cm">' 範囲や IN もそのまま書ける</span>
+arr = QueryP(h, <span class="st">"SELECT * FROM 売上 WHERE 部署 = ? AND 金額 BETWEEN ? AND ?"</span>, _
+             Array(<span class="st">"営業部"</span>, 1000, 5000))</code></pre>
+    </div>
+
+    <p>制限があるのは「セミコロンで複数の命令を並べる」ことだけです（例: <code>SELECT ...; DELETE ...</code>）。その場合は 1 文ずつ <code>QueryP</code> / <code>ExecP</code> を呼んでください。</p>
+
     <h3>安全な書き方（エラーが起きても必ず閉じる）</h3>
 
     <div class="code">
@@ -955,15 +971,64 @@ ExecDDL h, <span class="st">"CREATE TABLE 伝票 (" &amp; _
 Exec h, <span class="st">"INSERT INTO 伝票 (内容) VALUES ('一件目'), ('二件目')"</span></code></pre>
     </div>
 
-    <h3>よく使う SELECT に名前をつける（ビュー）</h3>
+    <h2 id="view"><span class="num">テーブル設計</span>ビューを登録する</h2>
+
+    <div class="locked" data-need="admin">
+      <span role="img" aria-label="使えません">🔒</span>
+      ビューの登録には <code>dackdb_admin.dll</code>（管理者）が必要です。登録したビューを SELECT で読むのは全階層でできます。
+    </div>
+
+    <div class="callout clay">
+      <span class="ico" role="img" aria-label="ポイント">💡</span>
+      <div><p><strong>Access の「クエリ」に相当する機能です。</strong>よく使う SELECT に名前をつけて保存しておくと、以降はテーブルと同じように <code>SELECT * FROM 名前</code> で呼び出せます。集計や結合の定義を一箇所にまとめられるので、シート側の SQL がすっきりします。</p></div>
+    </div>
+
+    <h3>登録する</h3>
+
+    <p><code>CREATE VIEW ビュー名 AS （SELECT 文）</code> で登録します。<code>CREATE OR REPLACE</code> を付けると、同名のビューがあれば定義を上書きします（作り直しに便利なので、ふだんはこちらを推奨）。</p>
 
     <div class="code">
       <button class="copy" type="button">コピー</button>
-<pre><code>ExecDDL h, <span class="st">"CREATE OR REPLACE VIEW 部署別売上 AS " &amp; _
-    "SELECT 部署, SUM(金額) AS 合計 FROM 売上 GROUP BY 部署"</span>
+<pre><code><span class="cm">' 部署ごとの売上合計に「部署別売上」という名前をつける</span>
+ExecDDL h, <span class="st">"CREATE OR REPLACE VIEW 部署別売上 AS " &amp; _
+    "SELECT 部署, SUM(金額) AS 合計, COUNT(*) AS 件数 " &amp; _
+    "FROM 売上 GROUP BY 部署"</span>
 
-<span class="cm">' 以降はテーブルと同じように使える</span>
-QueryToSheet h, <span class="st">"SELECT * FROM 部署別売上 ORDER BY 合計 DESC"</span>, Sheet1.Range(<span class="st">"A1"</span>)</code></pre>
+<span class="cm">' 複数テーブルの結合に名前をつけることもできる</span>
+ExecDDL h, <span class="st">"CREATE OR REPLACE VIEW 社員一覧 AS " &amp; _
+    "SELECT s.社員番号, s.氏名, d.部署名, s.給与 " &amp; _
+    "FROM 社員 s JOIN 部署 d ON s.部署コード = d.部署コード"</span></code></pre>
+    </div>
+
+    <h3>使う</h3>
+
+    <p>登録したあとは、テーブルとまったく同じように扱えます。並べ替えや絞り込みを重ねることもできます。</p>
+
+    <div class="code">
+      <button class="copy" type="button">コピー</button>
+<pre><code><span class="cm">' そのままシートに貼る</span>
+QueryToSheet h, <span class="st">"SELECT * FROM 部署別売上 ORDER BY 合計 DESC"</span>, Sheet1.Range(<span class="st">"A1"</span>)
+
+<span class="cm">' ビューにさらに条件を足す</span>
+Dim arr As Variant
+arr = QueryP(h, <span class="st">"SELECT * FROM 社員一覧 WHERE 部署名 = ? AND 給与 >= ?"</span>, _
+             Array(<span class="st">"営業部"</span>, 4000000))</code></pre>
+    </div>
+
+    <h3>一覧・削除</h3>
+
+    <div class="code">
+      <button class="copy" type="button">コピー</button>
+<pre><code><span class="cm">' 登録済みビューの一覧</span>
+QueryToSheet h, <span class="st">"SELECT view_name FROM duckdb_views()"</span>, Sheet1.Range(<span class="st">"A1"</span>)
+
+<span class="cm">' 削除</span>
+ExecDDL h, <span class="st">"DROP VIEW IF EXISTS 部署別売上"</span></code></pre>
+    </div>
+
+    <div class="callout">
+      <span class="ico" role="img" aria-label="メモ">📝</span>
+      <div><p>ビューは<strong>定義（SELECT 文）を保存するだけ</strong>で、データは持ちません。呼び出すたびに元のテーブルから最新の結果が計算されるので、元データを更新すればビューの結果も自動的に変わります。結果を固定して保存したい場合は、ビューではなく <code>CREATE TABLE ... AS SELECT ...</code> でテーブルにします。</p></div>
     </div>
 
     <h2 id="index"><span class="num">テーブル設計</span>インデックス</h2>

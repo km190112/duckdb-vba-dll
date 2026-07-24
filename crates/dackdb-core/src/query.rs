@@ -564,6 +564,52 @@ mod tests {
         conn::close(h).unwrap();
     }
 
+    /// 複数の `?` を並べられること（複合主キーの検索を想定）。
+    /// 「1 文のみ」はパラメータ数の制限ではなく文の数の制限、というのを固定する。
+    #[test]
+    fn multiple_parameters_bind_in_order_for_composite_key_search() {
+        let p = seeded("pcomposite.db");
+        let h = conn::open(Level::Admin, &p, OpenOptions::default()).unwrap();
+        conn::with_conn(h, |s| {
+            execute_ddl(
+                s,
+                "CREATE TABLE 勤怠 (社員番号 INTEGER, 日付 DATE, 時間 DOUBLE, \
+                 PRIMARY KEY (社員番号, 日付))",
+            )
+            .unwrap();
+            execute(
+                s,
+                "INSERT INTO 勤怠 VALUES (1, DATE '2024-01-15', 8.0), \
+                 (1, DATE '2024-01-16', 7.5), (2, DATE '2024-01-15', 8.0)",
+            )
+            .unwrap();
+        })
+        .unwrap();
+
+        // 複合主キー = ? 2 個で 1 件だけ取れること
+        let mut input = params_of(vec![VARIANT::i32(1), VARIANT::bstr("2024-01-15")]);
+        let mut v = conn::with_conn(h, |s| {
+            let g = unsafe { inbound::read_input_grid(&input, "パラメータ") }.unwrap();
+            query_params(
+                s,
+                "SELECT 時間 FROM 勤怠 WHERE 社員番号 = ? AND 日付 = ?",
+                &g,
+            )
+        })
+        .unwrap()
+        .unwrap();
+        unsafe {
+            let mut ub = 0i32;
+            SafeArrayGetUBound(v.value.parray, 1, &mut ub);
+            assert_eq!(ub, 2, "ヘッダ + 1 件ちょうど");
+            assert_eq!(cell(v.value.parray, 2, 1).value.dblVal, 8.0);
+        }
+        v.clear();
+        input.clear();
+
+        conn::close(h).unwrap();
+    }
+
     /// パラメータ付き実行は 1 文のみ。複数文だと検査と実行がずれる余地が出る。
     #[test]
     fn params_path_rejects_multiple_statements() {
