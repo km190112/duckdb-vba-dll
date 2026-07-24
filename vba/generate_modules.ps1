@@ -60,6 +60,14 @@ foreach ($t in $tiers) {
         throw "未置換のプレースホルダが残っています: $($t.MODULE)"
     }
 
+    # 行末を必ず CRLF に正規化する。
+    #
+    # VBE は .bas を CRLF で読むので CRLF であること自体が要件だが、それ以上に
+    # 「テンプレートの行末が何であっても出力が同じ」ことが重要。git の行末変換や
+    # 環境差でテンプレートが LF や CRCRLF になっても、生成物は常に同じバイト列になる。
+    # これが無いと、手元では一致するのに CI の新規チェックアウトでは差分が出る。
+    $out = ($out -replace "`r", "") -replace "`n", "`r`n"
+
     $path = Join-Path $here "$($t.MODULE).bas"
     [System.IO.File]::WriteAllText($path, $out, $cp932)
     Write-Host "生成: $($t.MODULE).bas -> $($t.DLL)" -ForegroundColor Green
