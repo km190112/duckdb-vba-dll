@@ -98,11 +98,17 @@ fn build_config(level: Level, opts: OpenOptions) -> Result<Config, String> {
     // 権限階層が意味を失うため、管理者 DLL でも許可しない。
     c.set("allow_unsigned_extensions", "false")?;
 
-    // 階層① ② では拡張の自動導入・自動読み込みも無効化する。
-    if level != Level::Admin {
-        c.set("autoinstall_known_extensions", "false")?;
-        c.set("autoload_known_extensions", "false")?;
-    }
+    // 拡張の自動導入・自動読み込みは**全階層で無効**にする。
+    //
+    // 以前は管理者だけ autoload を有効にしていたが、`enable_external_access=false`
+    // と組み合わさると「インストールしようとしたがディレクトリにアクセスできない」
+    // という原因の分かりにくいエラーになっていた。無効にしておけば DuckDB が
+    // 「その関数は icu 拡張にあります」と正確に案内してくれる。
+    //
+    // 実害があるのは CURRENT_DATE / today()（ICU 拡張が必要）くらいで、
+    // now() や CAST(now() AS DATE) で代替できる。
+    c.set("autoinstall_known_extensions", "false")?;
+    c.set("autoload_known_extensions", "false")?;
 
     // ---- 以降に設定を追加しないこと ----
     // lock_configuration は最後。これ以降の set_config は無視される。

@@ -30,27 +30,63 @@ ORDER BY c.table_schema, c.table_name, c.ordinal_position
 "#;
 
 /// `duckdb_tables()` の `sql` 列に各テーブルの CREATE 文が入っている。
+///
+/// インデックスは別カタログなので `duckdb_indexes()` から足す。これが無いと
+/// 出力した DDL を流し込んでもインデックスが復元されない。
 const SCHEMA_DDL_SQL: &str = r#"
-SELECT string_agg(sql, chr(10) || chr(10) ORDER BY schema_name, table_name)
-FROM duckdb_tables()
+SELECT
+  COALESCE((SELECT string_agg(sql, chr(10) || chr(10) ORDER BY schema_name, table_name)
+            FROM duckdb_tables()), '')
+  || COALESCE((SELECT chr(10) || chr(10) || string_agg(sql, chr(10) ORDER BY index_name)
+               FROM duckdb_indexes()), '')
+"#;
+
+/// インデックスの一覧。
+const SCHEMA_INDEX_SQL: &str = r#"
+SELECT index_name  AS "インデックス名",
+       table_name  AS "テーブル",
+       is_unique   AS "一意",
+       is_primary  AS "主キー",
+       sql         AS "定義"
+FROM duckdb_indexes()
+ORDER BY table_name, index_name
+"#;
+
+/// 制約（主キー・一意・NOT NULL・CHECK・外部キー）の一覧。
+///
+/// `constraint_column_names` は LIST 型で Excel のセルに入らないため、
+/// `array_to_string` で読める文字列にしている。
+const SCHEMA_CONSTRAINT_SQL: &str = r#"
+SELECT table_name                                   AS "テーブル",
+       constraint_type                              AS "種別",
+       array_to_string(constraint_column_names, ', ') AS "対象列",
+       constraint_text                              AS "定義"
+FROM duckdb_constraints()
+ORDER BY table_name, constraint_type
 "#;
 
 /// `DackExportSchema` の実装。
 ///
-/// - `"table"`（既定）: 2 次元配列。そのままシートに貼れる。
-/// - `"ddl"`: CREATE 文を連結した 1 本の文字列。
+/// - `"table"`（既定）: 列定義と主キー。2 次元配列。
+/// - `"index"`: インデックスの一覧。2 次元配列。
+/// - `"constraint"`: 制約の一覧。2 次元配列。
+/// - `"ddl"`: CREATE 文（テーブル＋インデックス）を連結した 1 本の文字列。
 pub fn export(state: &ConnState, format: &str) -> Result<VARIANT, String> {
     match format.trim().to_ascii_lowercase().as_str() {
         "" | "table" => query::query_internal(state, SCHEMA_TABLE_SQL),
+        "index" => query::query_internal(state, SCHEMA_INDEX_SQL),
+        "constraint" => query::query_internal(state, SCHEMA_CONSTRAINT_SQL),
         "ddl" => {
             let ddl = query::scalar_string(state, SCHEMA_DDL_SQL)?;
             match ddl {
-                Some(s) => Ok(VARIANT::bstr(&s)),
-                None => Ok(VARIANT::bstr("-- テーブルがありません")),
+                Some(s) if !s.trim().is_empty() => Ok(VARIANT::bstr(&s)),
+                _ => Ok(VARIANT::bstr("-- テーブルがありません")),
             }
         }
         other => Err(format!(
-            "未知の形式「{other}」です。\"table\"（2 次元配列）か \"ddl\"（CREATE 文）を指定してください。"
+            "未知の形式「{other}」です。\
+             \"table\"（列定義）/ \"index\"（インデックス）/ \"constraint\"（制約）/ \"ddl\"（CREATE 文）\
+             のいずれかを指定してください。"
         )),
     }
 }
@@ -79,10 +115,28 @@ mod tests {
                        入社日 DATE DEFAULT '2000-01-01')",
                 )
                 .unwrap();
+            s.conn
+                .query("CREATE INDEX idx_社員_氏名 ON 社員 (氏名)")
+                .unwrap();
         })
         .unwrap();
         conn::close(h).unwrap();
         path
+    }
+
+    /// 指定セルを文字列で取り出す。
+    unsafe fn cell(psa: *mut SAFEARRAY, r: i32, c: i32) -> String {
+        let mut out = VARIANT::empty();
+        VariantInit(&mut out);
+        let idx = [r, c];
+        SafeArrayGetElement(psa, idx.as_ptr(), &mut out as *mut VARIANT as *mut _);
+        let s = if out.vt == VT_BSTR {
+            bstr_to_string(out.value.bstrVal)
+        } else {
+            String::new()
+        };
+        out.clear();
+        s
     }
 
     #[test]
@@ -144,8 +198,71 @@ mod tests {
         let err = conn::with_conn(h, |s| export(s, "json"))
             .unwrap()
             .unwrap_err();
-        assert!(err.contains("table"), "{err}");
-        assert!(err.contains("ddl"), "{err}");
+        for expected in ["table", "index", "constraint", "ddl"] {
+            assert!(
+                err.contains(expected),
+                "{expected} が案内されていない: {err}"
+            );
+        }
+        conn::close(h).unwrap();
+    }
+
+    #[test]
+    fn ddl_format_includes_indexes_not_just_tables() {
+        let path = seeded("schema_ddl_idx.db");
+        let h = conn::open(Level::Admin, &path, OpenOptions::default()).unwrap();
+        let mut v = conn::with_conn(h, |s| export(s, "ddl")).unwrap().unwrap();
+        let ddl = unsafe { bstr_to_string(v.value.bstrVal) };
+        assert!(ddl.contains("CREATE TABLE"), "{ddl}");
+        // インデックスが抜けていると、出力した DDL を流しても復元できない
+        assert!(
+            ddl.contains("CREATE INDEX"),
+            "インデックスが含まれていない: {ddl}"
+        );
+        assert!(ddl.contains("idx_社員_氏名"), "{ddl}");
+        v.clear();
+        conn::close(h).unwrap();
+    }
+
+    #[test]
+    fn index_format_lists_indexes() {
+        let path = seeded("schema_index.db");
+        let h = conn::open(Level::Admin, &path, OpenOptions::default()).unwrap();
+        let mut v = conn::with_conn(h, |s| export(s, "index")).unwrap().unwrap();
+        unsafe {
+            let psa = v.value.parray;
+            assert_eq!(cell(psa, 1, 1), "インデックス名");
+            assert_eq!(cell(psa, 2, 1), "idx_社員_氏名");
+            assert_eq!(cell(psa, 2, 2), "社員");
+        }
+        v.clear();
+        conn::close(h).unwrap();
+    }
+
+    /// 制約一覧の「対象列」は LIST 型のままだと Excel のセルに入らない。
+    /// array_to_string で文字列にしていることを確認する。
+    #[test]
+    fn constraint_format_flattens_column_list_to_text() {
+        let path = seeded("schema_constraint.db");
+        let h = conn::open(Level::Admin, &path, OpenOptions::default()).unwrap();
+        let mut v = conn::with_conn(h, |s| export(s, "constraint"))
+            .unwrap()
+            .unwrap();
+        unsafe {
+            let psa = v.value.parray;
+            assert_eq!(cell(psa, 1, 3), "対象列");
+            let mut ub = 0i32;
+            SafeArrayGetUBound(psa, 1, &mut ub);
+            let mut found_pk = false;
+            for r in 2..=ub {
+                if cell(psa, r, 2) == "PRIMARY KEY" {
+                    assert_eq!(cell(psa, r, 3), "社員番号", "対象列が文字列になっていない");
+                    found_pk = true;
+                }
+            }
+            assert!(found_pk, "主キーの制約が一覧に無い");
+        }
+        v.clear();
         conn::close(h).unwrap();
     }
 
