@@ -1331,17 +1331,16 @@ QueryToSheet h, <span class="st">"EXPLAIN SELECT * FROM 社員 WHERE 氏名 = '�
 <span class="kw">End Sub</span>
 
 <span class="cm">'--- 実行してみて、拒否されたかどうかを文字列で返す ---</span>
+<span class="cm">' TryExec は失敗しても VBA のエラーを出さず False を返すので、</span>
+<span class="cm">' わざと違反させても途中で止まらない。</span>
 <span class="kw">Private Function</span> 試行(<span class="kw">ByVal</span> h <span class="kw">As LongLong</span>, <span class="kw">ByVal</span> 名前 <span class="kw">As String</span>, _
                         <span class="kw">ByVal</span> sql <span class="kw">As String</span>) <span class="kw">As String</span>
-    <span class="kw">On Error Resume Next</span>
-    Exec h, sql
-    <span class="kw">If</span> Err.Number &lt;&gt; 0 <span class="kw">Then</span>
-        試行 = 名前 &amp; <span class="st">": 期待どおり拒否されました"</span>
-        Err.Clear
-    <span class="kw">Else</span>
+    <span class="kw">Dim</span> msg <span class="kw">As String</span>
+    <span class="kw">If</span> TryExec(h, sql, msg) <span class="kw">Then</span>
         試行 = 名前 &amp; <span class="st">": ★通ってしまいました（制約を確認してください）"</span>
+    <span class="kw">Else</span>
+        試行 = 名前 &amp; <span class="st">": 期待どおり拒否されました → "</span> &amp; msg
     <span class="kw">End If</span>
-    <span class="kw">On Error GoTo</span> 0
 <span class="kw">End Function</span></code></pre>
     </div>
 
@@ -1399,6 +1398,7 @@ QueryToSheet h, <span class="st">"EXPLAIN SELECT * FROM 社員 WHERE 氏名 = '�
         <tr><td><code>Describe(h, 表名)</code></td><td>2 次元配列</td><td>列定義</td></tr>
         <tr data-need="rw"><td><code>Exec(h, sql)</code></td><td>影響行数</td><td>追加・更新・削除</td></tr>
         <tr data-need="rw"><td><code>ExecP(h, sql, 値)</code></td><td>影響行数</td><td>同上。<code>?</code> に値を渡す安全な形</td></tr>
+        <tr data-need="rw"><td><code>TryExec(h, sql, msg)</code></td><td>成功なら True</td><td>失敗してもエラーで止まらない <code>Exec</code>。理由が <code>msg</code> に入る</td></tr>
         <tr data-need="rw"><td><code>AppendRange(h, 表名, 範囲)</code></td><td>投入行数</td><td>シート範囲を一括投入。最速</td></tr>
         <tr data-need="rw"><td><code>BeginTx(h)</code></td><td>—</td><td>まとめ処理の開始</td></tr>
         <tr data-need="rw"><td><code>CommitTx(h)</code></td><td>—</td><td>確定</td></tr>
@@ -1456,6 +1456,20 @@ QueryToSheet h, <span class="st">"EXPLAIN SELECT * FROM 社員 WHERE 氏名 = '�
       <summary>このモジュールは 64bit 版 Excel 専用です</summary>
       <div class="body">
         <p>32bit 版の Excel では動きません。「ファイル」→「アカウント」→「Excel のバージョン情報」でご確認のうえ、情報システム部門にご相談ください。</p>
+      </div>
+    </details>
+
+    <details class="err">
+      <summary><code>On Error</code> を書いているのに、実行時エラーで止まってしまう</summary>
+      <div class="body">
+        <p><code>On Error Resume Next</code> を書いたのに <code>Err.Raise</code> の行で止まる場合は、VBE の設定が原因です。</p>
+        <p><strong>VBE のメニュー → ツール → オプション → 「全般」タブ → エラー トラップ</strong> を開いて、<strong>「エラー処理対象外のエラーで中断」</strong> を選んでください。</p>
+        <ul>
+          <li><strong>エラー発生時に中断</strong> … <code>On Error</code> を無視して必ず止まる</li>
+          <li><strong>クラス モジュールで中断</strong> … クラス モジュール内では止まる</li>
+          <li><strong>エラー処理対象外のエラーで中断</strong> … 自分で処理したエラーでは止まらない（これを選ぶ）</li>
+        </ul>
+        <p>この設定は Excel ブックではなく<strong>使う人ごとの VBE の設定</strong>なので、配布したブック側からは変えられません。そのため、失敗することが想定内の処理では <code>On Error</code> に頼らず <code>TryExec</code> を使ってください。<code>TryExec</code> はエラーを発生させず <code>False</code> を返すので、この設定に左右されません。</p>
       </div>
     </details>
 

@@ -55,7 +55,7 @@ jobs:
           $changed = git status --porcelain vba/
           if ($changed) {
             Write-Host "生成物がテンプレートと一致しません。" -ForegroundColor Red
-            Write-Host "vba/DackDb.template.bas を直したあと generate_modules.ps1 を実行して commit してください。"
+            Write-Host "vba/DackDb.template.txt を直したあと generate_modules.ps1 を実行して commit してください。"
             Write-Host $changed
             exit 1
           }

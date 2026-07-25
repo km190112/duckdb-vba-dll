@@ -9,7 +9,7 @@ Attribute VB_Name = "DackDbRW"
 ' 【重要】このモジュールは 64bit Excel 専用です。
 '
 ' 【このファイルは自動生成されています】
-'   直接編集せず vba\DackDb.template.bas を直してから
+'   直接編集せず vba\DackDb.template.txt を直してから
 '   pwsh -File vba\generate_modules.ps1 を実行してください。
 '
 ' 【使い方】
@@ -240,6 +240,39 @@ Public Function Exec(ByVal handle As LongLong, ByVal sql As String) As LongLong
     Dim v As Variant
     Check DackExecute(handle, StrPtr(sql), v), v, "Exec"
     Exec = CLngLng(v)
+End Function
+
+' Exec と同じことをするが、失敗しても VBA のエラーを発生させず False を返す。
+' 失敗の理由は errMsg に日本語で入る。
+'
+' 制約が効いているかを「わざと違反して」確かめる場面のように、失敗することが
+' 想定内である処理で使う。Exec + On Error Resume Next でも同じことは書けるが、
+' その書き方は VBE の「ツール > オプション > 全般 > エラー トラップ」が
+' 「エラー発生時に中断」になっていると無視されて途中で止まってしまう。
+' TryExec はそもそもエラーを発生させないので、その設定に左右されない。
+'
+'   例: Dim msg As String
+'       If TryExec(h, "INSERT INTO 部署 VALUES (1, '重複')", msg) Then
+'           Debug.Print "通ってしまいました"
+'       Else
+'           Debug.Print "拒否されました: " & msg
+'       End If
+Public Function TryExec(ByVal handle As LongLong, ByVal sql As String, _
+                        Optional ByRef errMsg As String) As Boolean
+    Dim v As Variant
+    Dim rc As Long
+    rc = DackExecute(handle, StrPtr(sql), v)
+    If rc = DACK_OK Then
+        errMsg = ""
+        TryExec = True
+    Else
+        If VarType(v) = vbString Then
+            errMsg = CStr(v)
+        Else
+            errMsg = "不明なエラー (コード " & rc & ")"
+        End If
+        TryExec = False
+    End If
 End Function
 
 ' パラメータ付きで DML を実行し、影響行数を返す。

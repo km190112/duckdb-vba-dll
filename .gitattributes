@@ -3,14 +3,16 @@
 # VBE がインポートできない。Git にバイト列を一切触らせないため text 変換を切る。
 #
 # 副作用として GitHub の Web 画面では日本語コメントが文字化けして見えるが、
-# VBE 側の要件を優先している。編集するのは UTF-8 の DackDb.template.bas のほう。
+# VBE 側の要件を優先している。編集するのは UTF-8 の DackDb.template.txt のほう。
 vba/DackDbR.bas     -text -diff linguist-generated=true
 vba/DackDbRW.bas    -text -diff linguist-generated=true
 vba/DackDbAdmin.bas -text -diff linguist-generated=true
 
 # テンプレートは UTF-8。生成器が行末を CRLF に正規化するので git 側では
 # 変換させない（変換すると手元と CI のチェックアウトで生成結果がずれる）。
-vba/DackDb.template.bas -text
+# 拡張子が .txt なのは、未置換のプレースホルダを含むテンプレートを VBE に
+# うっかりインポートできないようにするため。
+vba/DackDb.template.txt -text
 
 # --- それ以外 ---
 *.rs   text eol=lf

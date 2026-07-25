@@ -193,6 +193,7 @@ DuckDB の Appender API を使うため、INSERT 文の反復より 1〜2 桁高
 | `Describe(h, table)` | ✓ | ✓ | ✓ | 列定義 |
 | `Exec(h, sql)` | ✗ | ✓ | ✓ | DML → 影響行数 |
 | `ExecP(h, sql, params)` | ✗ | ✓ | ✓ | `?` バインド付き DML |
+| `TryExec(h, sql, errMsg)` | ✗ | ✓ | ✓ | DML。失敗時は例外でなく `False` を返す |
 | `AppendRange(h, table, data)` | ✗ | ✓ | ✓ | シート範囲を一括投入（高速） |
 | `BeginTx/CommitTx/RollbackTx(h)` | ✗ | ✓ | ✓ | トランザクション |
 | `CreateDb(path)` | ✗ | ✗ | ✓ | 新しい `dack.db` を作成 |
@@ -354,7 +355,9 @@ crates/dackdb-{r,rw,admin}/src/lib.rs   マクロを 1 行呼ぶだけ
   メモリに書き込む本用途では二重解放の危険があるためです。詳細は `oleaut.rs` 冒頭。
 - **`vba/*.bas` は Shift-JIS (CP932) です。** VBE のインポートがそう読むためで、
   GitHub の Web 画面では日本語コメントが文字化けして見えます。編集するのは
-  UTF-8 の `vba/DackDb.template.bas` のほうです。
+  UTF-8 の `vba/DackDb.template.txt` のほうです。テンプレートの拡張子が `.txt`
+  なのは、`{{MODULE}}` などの未置換プレースホルダを含むため VBE にインポートすると
+  「オブジェクト名が不正です」になるからです。VBE に入れるのは生成物の 3 本だけです。
 
 ---
 

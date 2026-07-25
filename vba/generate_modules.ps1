@@ -1,7 +1,13 @@
-# DackDb.template.bas から 3 つの VBA モジュールを生成する。
+# DackDb.template.txt から 3 つの VBA モジュールを生成する。
 #
 # 3 つのモジュールは Lib の DLL 名と説明文だけが違う。手で 3 つ保守すると必ず
 # ズレるので 1 つのテンプレートから生成する。
+#
+# 【拡張子が .txt である理由】
+# テンプレートは {{MODULE}} などの未置換のプレースホルダを含むため、VBE に
+# インポートすると 1 行目の Attribute VB_Name で「オブジェクト名が不正です」に
+# なる。.bas のままだと VBE のインポート ダイアログに並んでしまい取り違えるので、
+# インポートできない拡張子にしてある。VBE に入れるのは生成物の 3 本だけ。
 #
 # 【文字コードが重要】
 # VBE の「ファイルのインポート」は .bas を Shift-JIS (CP932) として読む。
@@ -13,7 +19,7 @@
 
 $ErrorActionPreference = 'Stop'
 $here = $PSScriptRoot
-$templatePath = Join-Path $here 'DackDb.template.bas'
+$templatePath = Join-Path $here 'DackDb.template.txt'
 
 $template = [System.IO.File]::ReadAllText($templatePath, [System.Text.Encoding]::UTF8)
 $cp932 = [System.Text.Encoding]::GetEncoding(932)
