@@ -191,12 +191,12 @@ fn upgrade_hint(level: Level, t: ffi::duckdb_statement_type) -> &'static str {
     match level {
         Level::Read => {
             if is_dml_type(t) {
-                "書き込みには dackdb_rw.dll（読み書き可）を使ってください。"
+                "書き込みには duckdb_rw.dll（読み書き可）を使ってください。"
             } else {
-                "スキーマ変更には dackdb_admin.dll（管理者）を使ってください。"
+                "スキーマ変更には duckdb_admin.dll（管理者）を使ってください。"
             }
         }
-        Level::ReadWrite => "スキーマ変更には dackdb_admin.dll（管理者）を使ってください。",
+        Level::ReadWrite => "スキーマ変更には duckdb_admin.dll（管理者）を使ってください。",
         Level::Admin => "",
     }
 }

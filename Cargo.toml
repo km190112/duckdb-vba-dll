@@ -1,10 +1,10 @@
 [workspace]
 resolver = "2"
 members = [
-    "crates/dackdb-core",
-    "crates/dackdb-r",
-    "crates/dackdb-rw",
-    "crates/dackdb-admin",
+    "crates/duckdb-core",
+    "crates/duckdb-r",
+    "crates/duckdb-rw",
+    "crates/duckdb-admin",
 ]
 
 [workspace.package]
@@ -14,10 +14,10 @@ rust-version = "1.82"
 license = "MIT"
 
 [workspace.dependencies]
-dackdb-core = { path = "crates/dackdb-core" }
+duckdb-core = { path = "crates/duckdb-core" }
 libduckdb-sys = { version = "1.10505", features = ["bundled"] }
 # VARIANT / SAFEARRAY は `windows` クレートではなく oleaut.rs で手書きしている。
-# 理由は crates/dackdb-core/src/oleaut.rs の冒頭コメントを参照。
+# 理由は crates/duckdb-core/src/oleaut.rs の冒頭コメントを参照。
 
 # release プロファイル：panic = "abort" は絶対に指定しないこと。
 # FFI 境界で catch_unwind によって panic を捕捉する設計のため、

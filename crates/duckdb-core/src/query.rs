@@ -228,7 +228,7 @@ mod tests {
     use crate::oleaut::*;
 
     fn tmp_db(name: &str) -> String {
-        let dir = std::env::temp_dir().join("dackdb-tests");
+        let dir = std::env::temp_dir().join("duckdb-tests");
         std::fs::create_dir_all(&dir).unwrap();
         let p = dir.join(name);
         let _ = std::fs::remove_file(&p);
@@ -413,7 +413,7 @@ mod tests {
                     Err(e) => e,
                 };
                 assert!(
-                    err.contains("dackdb_admin.dll"),
+                    err.contains("duckdb_admin.dll"),
                     "「{sql}」が管理者 DLL への案内無しに扱われた: {err}"
                 );
             }
@@ -429,7 +429,7 @@ mod tests {
         conn::with_conn(h, |s| {
             let err = execute(s, "INSERT INTO 売上 VALUES (9,'x',1,NULL)").unwrap_err();
             assert!(
-                err.contains("dackdb_rw.dll"),
+                err.contains("duckdb_rw.dll"),
                 "上位 DLL の案内が無い: {err}"
             );
         })
@@ -554,7 +554,7 @@ mod tests {
             let g = unsafe { inbound::read_input_grid(&input, "パラメータ") }.unwrap();
             let err = execute_params(s, "DELETE FROM 売上 WHERE id = ?", &g).unwrap_err();
             assert!(
-                err.contains("dackdb_rw.dll"),
+                err.contains("duckdb_rw.dll"),
                 "権限ゲートが効いていない: {err}"
             );
         })

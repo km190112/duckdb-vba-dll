@@ -75,7 +75,7 @@ mod tests {
     use crate::variant::Grid;
 
     fn seeded(name: &str) -> String {
-        let dir = std::env::temp_dir().join("dackdb-tests");
+        let dir = std::env::temp_dir().join("duckdb-tests");
         std::fs::create_dir_all(&dir).unwrap();
         let p = dir.join(name);
         let _ = std::fs::remove_file(&p);

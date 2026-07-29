@@ -1,7 +1,7 @@
 //! 権限レベルの定義。
 //!
 //! 重要：レベルは Cargo の feature ではなく、この enum の定数を各 cdylib クレートから
-//! `export_dackdb_ffi!` マクロに渡すことで決める。feature にするとワークスペース一括
+//! `export_duckdb_ffi!` マクロに渡すことで決める。feature にするとワークスペース一括
 //! ビルド時に feature 統合が起きて 3 つの DLL がすべて管理者権限になってしまう。
 
 /// DLL が持つ権限レベル。

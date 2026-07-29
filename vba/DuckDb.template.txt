@@ -9,13 +9,13 @@ Attribute VB_Name = "{{MODULE}}"
 ' 【重要】このモジュールは 64bit Excel 専用です。
 '
 ' 【このファイルは自動生成されています】
-'   直接編集せず vba\DackDb.template.txt を直してから
+'   直接編集せず vba\DuckDb.template.txt を直してから
 '   pwsh -File vba\generate_modules.ps1 を実行してください。
 '
 ' 【使い方】
 '   1. このファイルを VBE で「ファイル > ファイルのインポート」する
 '   2. {{DLL}} を任意のフォルダに置く
-'   3. 起動時に一度 DackDbInit "C:\path\to\dll_folder" を呼ぶ
+'   3. 起動時に一度 DuckDbInit "C:\path\to\dll_folder" を呼ぶ
 '   4. h = OpenDb("C:\data\dack.db")
 '      QueryToSheet h, "SELECT * FROM 売上", Sheet1.Range("A1")
 '      CloseDb h
@@ -29,7 +29,7 @@ Attribute VB_Name = "{{MODULE}}"
 '   ・戻り値 0 が成功、負値がエラー。
 '
 ' 【3 つのモジュールの関係】
-'   DackDbR / DackDbRW / DackDbAdmin は Lib の DLL 名だけが異なります。
+'   DuckDbR / DuckDbRW / DuckDbAdmin は Lib の DLL 名だけが異なります。
 '   下位向けに書いたコードは上位モジュールでもそのまま動きます。
 '==============================================================================
 Option Explicit
@@ -111,8 +111,8 @@ Private Declare PtrSafe Function DackCheckpoint Lib "{{DLL}}" ( _
 ' DLL を明示的に読み込む。Declare の Lib にフルパスを直書きしなくて済むよう、
 ' 起動時に一度だけ呼ぶ。以降の Declare は読み込み済みモジュールに解決される。
 '
-'   例: DackDbInit ThisWorkbook.Path & "\dll"
-Public Sub DackDbInit(ByVal dllFolder As String)
+'   例: DuckDbInit ThisWorkbook.Path & "\dll"
+Public Sub DuckDbInit(ByVal dllFolder As String)
     If Not IsWin64() Then
         Err.Raise ERR_BASE, "{{MODULE}}", _
             "このモジュールは 64bit 版 Excel 専用です。" & vbCrLf & _
