@@ -518,8 +518,8 @@
 
     <header class="masthead">
       <span class="page-icon" role="img" aria-label="アヒル">🦆</span>
-      <h1>dackdb 使い方マニュアル</h1>
-      <p class="lede">Excel の VBA から DuckDB のデータベース（<code>dack.db</code>）を読み書きするためのモジュールです。数十万行を 1 秒かからずシートに展開できます。</p>
+      <h1>duckdb 使い方マニュアル</h1>
+      <p class="lede">Excel の VBA から DuckDB のデータベース（<code>duck.db</code>）を読み書きするためのモジュールです。数十万行を 1 秒かからずシートに展開できます。</p>
       <div class="meta">
         <span><b>対象</b> 64bit 版 Excel</span>
         <span><b>用意するもの</b> DLL 1 ファイルと .bas 1 ファイル</span>
@@ -548,7 +548,7 @@
         <p>配布された DLL を、ブックと同じ場所の <code>dll</code> フォルダに入れます。フォルダ名や場所は自由ですが、以下の説明はこの配置を前提にします。</p>
         <div class="files">
 売上管理.xlsm<br>
-<span class="d">dll\</span>dackdb_r.dll　　<span class="d">← 配布された DLL を 1 つ</span>
+<span class="d">dll\</span>duckdb_r.dll　　<span class="d">← 配布された DLL を 1 つ</span>
         </div>
       </li>
 
@@ -559,9 +559,9 @@
         <table>
           <thead><tr><th>配布された DLL</th><th>読み込む .bas</th></tr></thead>
           <tbody>
-            <tr><td><code>dackdb_r.dll</code></td><td><code>DackDbR.bas</code></td></tr>
-            <tr><td><code>dackdb_rw.dll</code></td><td><code>DackDbRW.bas</code></td></tr>
-            <tr><td><code>dackdb_admin.dll</code></td><td><code>DackDbAdmin.bas</code></td></tr>
+            <tr><td><code>duckdb_r.dll</code></td><td><code>duckDbR.bas</code></td></tr>
+            <tr><td><code>duckdb_rw.dll</code></td><td><code>duckDbRW.bas</code></td></tr>
+            <tr><td><code>duckdb_admin.dll</code></td><td><code>duckDbAdmin.bas</code></td></tr>
           </tbody>
         </table>
         </div>
@@ -573,7 +573,7 @@
         <div class="code">
           <button class="copy" type="button">コピー</button>
 <pre><code><span class="kw">Private Sub</span> Workbook_Open()
-    DackDbInit ThisWorkbook.Path &amp; <span class="st">"\dll"</span>
+    duckDbInit ThisWorkbook.Path &amp; <span class="st">"\dll"</span>
 <span class="kw">End Sub</span></code></pre>
         </div>
         <p>これで準備完了です。ブックを保存して開き直してください。</p>
@@ -592,17 +592,17 @@
     <div class="tiers" role="group" aria-label="使用している DLL を選択">
       <button class="tier" type="button" data-tier="r" aria-pressed="false">
         <span class="t-n">① 読み取り専用</span>
-        <span class="t-f">dackdb_r.dll</span>
+        <span class="t-f">duckdb_r.dll</span>
         <span class="t-d">データを見るだけ。誤ってデータを壊す心配がありません。</span>
       </button>
       <button class="tier" type="button" data-tier="rw" aria-pressed="true">
         <span class="t-n">② 読み書き可</span>
-        <span class="t-f">dackdb_rw.dll</span>
+        <span class="t-f">duckdb_rw.dll</span>
         <span class="t-d">データの追加・更新・削除ができます。表の構造は変えられません。</span>
       </button>
       <button class="tier" type="button" data-tier="admin" aria-pressed="false">
         <span class="t-n">③ 管理者</span>
-        <span class="t-f">dackdb_admin.dll</span>
+        <span class="t-f">duckdb_admin.dll</span>
         <span class="t-d">データベースやテーブルの作成・削除まで、すべてできます。</span>
       </button>
     </div>
@@ -612,11 +612,11 @@
     <div class="code">
       <button class="copy" type="button">コピー</button>
 <pre><code><span class="kw">Sub</span> 権限を確認()
-    MsgBox DackVersion()
+    MsgBox duckVersion()
 <span class="kw">End Sub</span>
 
 <span class="cm">' 表示例:
-' dackdb 0.1.0 / DuckDB v1.5.5 / 権限: READ_WRITE (読み書き可（DDL 不可）)</span></code></pre>
+' duckdb 0.1.0 / DuckDB v1.5.5 / 権限: READ_WRITE (読み書き可（DDL 不可）)</span></code></pre>
     </div>
 
     <div class="callout">
@@ -634,7 +634,7 @@
 
     <div class="code">
       <button class="copy" type="button">コピー</button>
-<pre><code><span class="kw">Private Declare PtrSafe Function</span> DackQuery <span class="kw">Lib</span> <span class="st">"dackdb_r.dll"</span> ( _
+<pre><code><span class="kw">Private Declare PtrSafe Function</span> duckQuery <span class="kw">Lib</span> <span class="st">"duckdb_r.dll"</span> ( _
     <span class="kw">ByVal</span> handle <span class="kw">As LongLong</span>, _
     <span class="kw">ByVal</span> sqlPtr <span class="kw">As LongPtr</span>, _
     <span class="kw">ByRef</span> result <span class="kw">As Variant</span>) <span class="kw">As Long</span></code></pre>
@@ -642,23 +642,23 @@
 
     <ul>
       <li><code>PtrSafe</code> — 64bit 環境で使う宣言であることを示します。これが無いと 64bit Excel でエラーになります</li>
-      <li><code>Lib "dackdb_r.dll"</code> — どの DLL の関数かを指定します。<strong>この文字列だけが 3 つのモジュールの違い</strong>です</li>
+      <li><code>Lib "duckdb_r.dll"</code> — どの DLL の関数かを指定します。<strong>この文字列だけが 3 つのモジュールの違い</strong>です</li>
       <li>戻り値の <code>Long</code> — <code>0</code> なら成功、負の数ならエラーです</li>
     </ul>
 
-    <h3>なぜ DLL のフォルダを <code>DackDbInit</code> で教えるのか</h3>
+    <h3>なぜ DLL のフォルダを <code>duckDbInit</code> で教えるのか</h3>
 
-    <p><code>Lib "dackdb_r.dll"</code> はファイル名だけで、場所を書いていません。Windows は決められた場所しか探さないので、そのままではブックの隣にある DLL を見つけられません。</p>
+    <p><code>Lib "duckdb_r.dll"</code> はファイル名だけで、場所を書いていません。Windows は決められた場所しか探さないので、そのままではブックの隣にある DLL を見つけられません。</p>
 
-    <p>そこで <code>DackDbInit</code> が、<strong>先回りしてフルパスで DLL を読み込んでおきます</strong>。一度読み込まれた DLL は名前で参照できるようになるため、以降の <code>Declare</code> がすべて解決されます。</p>
+    <p>そこで <code>duckDbInit</code> が、<strong>先回りしてフルパスで DLL を読み込んでおきます</strong>。一度読み込まれた DLL は名前で参照できるようになるため、以降の <code>Declare</code> がすべて解決されます。</p>
 
     <div class="code">
       <button class="copy" type="button">コピー</button>
-<pre><code><span class="cm">' DackDbInit の中身（抜粋）</span>
+<pre><code><span class="cm">' duckDbInit の中身（抜粋）</span>
 <span class="kw">Private Declare PtrSafe Function</span> LoadLibraryW <span class="kw">Lib</span> <span class="st">"kernel32"</span> ( _
     <span class="kw">ByVal</span> lpFileName <span class="kw">As LongPtr</span>) <span class="kw">As LongPtr</span>
 
-LoadLibraryW StrPtr(<span class="st">"C:\...\dll\dackdb_r.dll"</span>)   <span class="cm">' フルパスで先に読み込む</span></code></pre>
+LoadLibraryW StrPtr(<span class="st">"C:\...\dll\duckdb_r.dll"</span>)   <span class="cm">' フルパスで先に読み込む</span></code></pre>
     </div>
 
     <p>これがブックを開くたびに一度だけ必要な理由です。フォルダを移動したりブックを別の場所にコピーした場合も、パスさえ合っていればそのまま動きます。</p>
@@ -680,7 +680,7 @@ LoadLibraryW StrPtr(<span class="st">"C:\...\dll\dackdb_r.dll"</span>)   <span c
 
 <span class="cm">' ✓ 位置だけを渡すので変換されない</span>
 <span class="cm">'   Declare ... (ByVal sqlPtr As LongPtr)</span>
-DackQuery handle, StrPtr(sql), result</code></pre>
+duckQuery handle, StrPtr(sql), result</code></pre>
     </div>
 
     <p>戻り側も同じ理屈で、<code>String</code> ではなく <code>Variant</code> で受け取ります。<code>Variant</code> は VBA が変換せずそのまま扱うため、日本語も配列も安全に渡せます。</p>
@@ -713,7 +713,7 @@ DackQuery handle, StrPtr(sql), result</code></pre>
       <button class="copy" type="button">コピー</button>
 <pre><code><span class="kw">Sub</span> 営業部の売上を取得()
     <span class="kw">Dim</span> h <span class="kw">As LongLong</span>
-    h = OpenDb(<span class="st">"C:\data\dack.db"</span>)
+    h = OpenDb(<span class="st">"C:\data\duck.db"</span>)
 
     <span class="kw">Dim</span> n <span class="kw">As Long</span>
     n = QueryToSheet(h, <span class="st">"SELECT * FROM 売上 WHERE 部署 = '営業部'"</span>, _
@@ -798,7 +798,7 @@ arr = QueryP(h, <span class="st">"SELECT * FROM 売上 WHERE 部署 = ? AND 金�
     <span class="kw">Dim</span> h <span class="kw">As LongLong</span>
     <span class="kw">On Error GoTo</span> 後始末
 
-    h = OpenDb(<span class="st">"C:\data\dack.db"</span>)
+    h = OpenDb(<span class="st">"C:\data\duck.db"</span>)
     QueryToSheet h, <span class="st">"SELECT * FROM 売上"</span>, Sheet1.Range(<span class="st">"A1"</span>)
 
 後始末:
@@ -811,7 +811,7 @@ arr = QueryP(h, <span class="st">"SELECT * FROM 売上 WHERE 部署 = ? AND 金�
 
     <div class="locked" data-need="rw">
       <span role="img" aria-label="使えません">🔒</span>
-      読み取り専用の DLL では、この章の操作はできません。<code>dackdb_rw.dll</code> が必要です。
+      読み取り専用の DLL では、この章の操作はできません。<code>duckdb_rw.dll</code> が必要です。
     </div>
 
     <h3>シートの範囲をまとめて追加する</h3>
@@ -873,7 +873,7 @@ MsgBox <span class="st">"取り消しました: "</span> &amp; Err.Description</
 
     <div class="locked" data-need="admin">
       <span role="img" aria-label="使えません">🔒</span>
-      この章以降の操作には <code>dackdb_admin.dll</code>（管理者）が必要です。
+      この章以降の操作には <code>duckdb_admin.dll</code>（管理者）が必要です。
     </div>
 
     <h3>新しいデータベースを作る</h3>
@@ -881,7 +881,7 @@ MsgBox <span class="st">"取り消しました: "</span> &amp; Err.Description</
     <div class="code">
       <button class="copy" type="button">コピー</button>
 <pre><code><span class="kw">Dim</span> h <span class="kw">As LongLong</span>
-h = CreateDb(<span class="st">"C:\data\dack.db"</span>)   <span class="cm">' 既にファイルがあるとエラー</span></code></pre>
+h = CreateDb(<span class="st">"C:\data\duck.db"</span>)   <span class="cm">' 既にファイルがあるとエラー</span></code></pre>
     </div>
 
     <p>既存ファイルを黙って上書きしないよう、<code>CreateDb</code> はファイルが既にある場合エラーにします。既存のものを開くときは <code>OpenDb</code> です。</p>
@@ -975,7 +975,7 @@ Exec h, <span class="st">"INSERT INTO 伝票 (内容) VALUES ('一件目'), ('�
 
     <div class="locked" data-need="admin">
       <span role="img" aria-label="使えません">🔒</span>
-      ビューの登録には <code>dackdb_admin.dll</code>（管理者）が必要です。登録したビューを SELECT で読むのは全階層でできます。
+      ビューの登録には <code>duckdb_admin.dll</code>（管理者）が必要です。登録したビューを SELECT で読むのは全階層でできます。
     </div>
 
     <div class="callout clay">
@@ -1035,7 +1035,7 @@ ExecDDL h, <span class="st">"DROP VIEW IF EXISTS 部署別売上"</span></code><
 
     <div class="locked" data-need="admin">
       <span role="img" aria-label="使えません">🔒</span>
-      インデックスの作成には <code>dackdb_admin.dll</code>（管理者）が必要です。
+      インデックスの作成には <code>duckdb_admin.dll</code>（管理者）が必要です。
     </div>
 
     <div class="code">
@@ -1071,7 +1071,7 @@ ExecDDL h, <span class="st">"DROP INDEX idx_氏名小文字"</span></code></pre>
 
     <div class="locked" data-need="admin">
       <span role="img" aria-label="使えません">🔒</span>
-      この操作には <code>dackdb_admin.dll</code>（管理者）が必要です。
+      この操作には <code>duckdb_admin.dll</code>（管理者）が必要です。
     </div>
 
     <div class="code">
@@ -1195,8 +1195,8 @@ QueryToSheet h, <span class="st">"EXPLAIN SELECT * FROM 社員 WHERE 氏名 = '�
       <div>
         <p><strong>必要なもの</strong></p>
         <ul>
-          <li><code>DackDbAdmin.bas</code> をインポート済みであること（テーブル作成を含むため）</li>
-          <li><code>dackdb_admin.dll</code> がブックと同じ場所の <code>dll</code> フォルダにあること</li>
+          <li><code>duckDbAdmin.bas</code> をインポート済みであること（テーブル作成を含むため）</li>
+          <li><code>duckdb_admin.dll</code> がブックと同じ場所の <code>dll</code> フォルダにあること</li>
           <li>ブックが保存済みであること（<code>ThisWorkbook.Path</code> を使うため）</li>
         </ul>
         <p>読み書き用・読み取り用の DLL しか無い場合は、テーブル作成の部分を飛ばして「データを入れる」以降だけを参考にしてください。</p>
@@ -1208,7 +1208,7 @@ QueryToSheet h, <span class="st">"EXPLAIN SELECT * FROM 社員 WHERE 氏名 = '�
 <pre><code><span class="kw">Option Explicit</span>
 
 <span class="cm">'==============================================================
-' dackdb 総合サンプル
+' duckdb 総合サンプル
 '   F5 で サンプル_実行 を動かしてください。
 '   Sheet1 に社員データを書き出し、Sheet2 にスキーマを出力します。
 '=============================================================='</span>
@@ -1220,7 +1220,7 @@ QueryToSheet h, <span class="st">"EXPLAIN SELECT * FROM 社員 WHERE 氏名 = '�
     <span class="kw">On Error GoTo</span> 後始末
 
     <span class="cm">'--- 1. DLL を読み込む（ブックを開いたとき一度でも可）---</span>
-    DackDbInit ThisWorkbook.Path &amp; <span class="st">"\dll"</span>
+    duckDbInit ThisWorkbook.Path &amp; <span class="st">"\dll"</span>
 
     <span class="cm">'--- 2. まっさらな DB を作る ---</span>
     dbPath = ThisWorkbook.Path &amp; <span class="st">"\sample.db"</span>
@@ -1361,7 +1361,7 @@ QueryToSheet h, <span class="st">"EXPLAIN SELECT * FROM 社員 WHERE 氏名 = '�
     <span class="kw">Dim</span> h <span class="kw">As LongLong</span>
     <span class="kw">On Error GoTo</span> 後始末
 
-    h = OpenDb(<span class="st">"C:\data\dack.db"</span>)
+    h = OpenDb(<span class="st">"C:\data\duck.db"</span>)
 
     BeginTx h
     Exec        h, <span class="st">"DELETE FROM 売上 WHERE 年月 = '2026-07'"</span>
@@ -1386,9 +1386,9 @@ QueryToSheet h, <span class="st">"EXPLAIN SELECT * FROM 社員 WHERE 氏名 = '�
         <tr><th>関数</th><th>返すもの</th><th>説明</th></tr>
       </thead>
       <tbody>
-        <tr><td><code>DackDbInit(フォルダ)</code></td><td>—</td><td>DLL を読み込む。ブックを開いたときに一度だけ</td></tr>
-        <tr><td><code>DackVersion()</code></td><td>文字列</td><td>版数と自分の権限</td></tr>
-        <tr><td><code>DackCapabilities()</code></td><td>文字列</td><td>使える関数の一覧</td></tr>
+        <tr><td><code>duckDbInit(フォルダ)</code></td><td>—</td><td>DLL を読み込む。ブックを開いたときに一度だけ</td></tr>
+        <tr><td><code>duckVersion()</code></td><td>文字列</td><td>版数と自分の権限</td></tr>
+        <tr><td><code>duckCapabilities()</code></td><td>文字列</td><td>使える関数の一覧</td></tr>
         <tr><td><code>OpenDb(パス)</code></td><td>ハンドル</td><td>データベースを開く</td></tr>
         <tr><td><code>CloseDb(h)</code></td><td>—</td><td>閉じる。必ず呼ぶこと</td></tr>
         <tr><td><code>Query(h, sql)</code></td><td>2 次元配列</td><td>SELECT の結果。1 行目は列名</td></tr>
@@ -1445,10 +1445,10 @@ QueryToSheet h, <span class="st">"EXPLAIN SELECT * FROM 社員 WHERE 氏名 = '�
     <p>エラーメッセージは日本語で、対処方法まで書かれています。よく出るものを挙げます。</p>
 
     <details class="err">
-      <summary>DLL が見つかりません: ...\dackdb_r.dll</summary>
+      <summary>DLL が見つかりません: ...\duckdb_r.dll</summary>
       <div class="body">
-        <p><code>DackDbInit</code> に渡したフォルダに DLL が入っていません。フォルダのパスと、DLL のファイル名が一致しているか確認してください。</p>
-        <p>ブックと同じ場所の <code>dll</code> フォルダに置いた場合は <code>DackDbInit ThisWorkbook.Path &amp; "\dll"</code> です。</p>
+        <p><code>duckDbInit</code> に渡したフォルダに DLL が入っていません。フォルダのパスと、DLL のファイル名が一致しているか確認してください。</p>
+        <p>ブックと同じ場所の <code>dll</code> フォルダに置いた場合は <code>duckDbInit ThisWorkbook.Path &amp; "\dll"</code> です。</p>
       </div>
     </details>
 
@@ -1474,15 +1474,15 @@ QueryToSheet h, <span class="st">"EXPLAIN SELECT * FROM 社員 WHERE 氏名 = '�
     </details>
 
     <details class="err">
-      <summary>【権限エラー】DackExecute はこの DLL では使えません</summary>
+      <summary>【権限エラー】duckExecute はこの DLL では使えません</summary>
       <div class="body">
-        <p>読み取り専用の DLL でデータを書き込もうとしています。書き込みには <code>dackdb_rw.dll</code>、テーブルの作成には <code>dackdb_admin.dll</code> が必要です。</p>
+        <p>読み取り専用の DLL でデータを書き込もうとしています。書き込みには <code>duckdb_rw.dll</code>、テーブルの作成には <code>duckdb_admin.dll</code> が必要です。</p>
         <p>メッセージの続きに、必要な DLL の名前が書かれています。配布元にご相談ください。</p>
       </div>
     </details>
 
     <details class="err">
-      <summary>データベースファイルが見つかりません: C:\data\dack.db</summary>
+      <summary>データベースファイルが見つかりません: C:\data\duck.db</summary>
       <div class="body">
         <p>パスが間違っているか、ファイルがまだ作られていません。読み取り専用の DLL は新しいファイルを作れないので、その場合は管理者の DLL で <code>CreateDb</code> を使う必要があります。</p>
       </div>
@@ -1609,7 +1609,7 @@ ExecDDL h, <span class="st">"CREATE INDEX idx_社員_氏名 ON 社員 (氏名)"<
     <h2 id="limits"><span class="num">最後に</span>知っておくこと</h2>
 
     <h3>同じファイルは同時に開けません</h3>
-    <p>1 つの Excel の中で、同じ <code>dack.db</code> を 2 つのハンドルで開くことはできません。必ず片方を閉じてから開いてください。別の Excel（別プロセス）から読み取り目的で開くことは可能です。</p>
+    <p>1 つの Excel の中で、同じ <code>duck.db</code> を 2 つのハンドルで開くことはできません。必ず片方を閉じてから開いてください。別の Excel（別プロセス）から読み取り目的で開くことは可能です。</p>
 
     <h3>DLL の分割は「うっかり」を防ぐためのものです</h3>
     <p>読み取り専用の DLL を配ることで、操作ミスによるデータの破損を防げます。ただしこれは<strong>セキュリティのための仕組みではありません</strong>。管理者用の DLL を入手した人は何でもできます。厳密に制限する必要がある場合は、データベースファイル自体に Windows の読み取り専用権限を設定してください。</p>
@@ -1628,7 +1628,7 @@ arr = Query(h, <span class="st">"SELECT 部署, SUM(金額) AS 合計 " &amp; _
     </div>
 
     <div class="foot">
-      dackdb 0.1.0 ／ DuckDB v1.5.5 ／ 64bit Excel 専用<br>
+      duckdb 0.1.0 ／ DuckDB v1.5.5 ／ 64bit Excel 専用<br>
       不具合や要望は、実行した SQL とエラーメッセージを添えて配布元までお知らせください。
     </div>
 
@@ -1649,7 +1649,7 @@ arr = Query(h, <span class="st">"SELECT 部署, SUM(金額) AS 合計 " &amp; _
     buttons.forEach(function (b) {
       b.setAttribute("aria-pressed", String(b.dataset.tier === tier));
     });
-    try { localStorage.setItem("dackdb-tier", tier); } catch (e) { /* 無視 */ }
+    try { localStorage.setItem("duckdb-tier", tier); } catch (e) { /* 無視 */ }
   }
 
   buttons.forEach(function (b) {
@@ -1657,7 +1657,7 @@ arr = Query(h, <span class="st">"SELECT 部署, SUM(金額) AS 合計 " &amp; _
   });
 
   var saved = null;
-  try { saved = localStorage.getItem("dackdb-tier"); } catch (e) { /* 無視 */ }
+  try { saved = localStorage.getItem("duckdb-tier"); } catch (e) { /* 無視 */ }
   setTier(saved === "r" || saved === "rw" || saved === "admin" ? saved : "rw");
 
   /* コードのコピー ----------------------------------------------------- */
