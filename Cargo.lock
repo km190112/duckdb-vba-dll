@@ -69,14 +69,14 @@ dependencies = [
 ]
 
 [[package]]
-name = "dackdb-admin"
+name = "duckdb-admin"
 version = "0.1.0"
 dependencies = [
- "dackdb-core",
+ "duckdb-core",
 ]
 
 [[package]]
-name = "dackdb-core"
+name = "duckdb-core"
 version = "0.1.0"
 dependencies = [
  "libduckdb-sys",
@@ -84,17 +84,17 @@ dependencies = [
 ]
 
 [[package]]
-name = "dackdb-r"
+name = "duckdb-r"
 version = "0.1.0"
 dependencies = [
- "dackdb-core",
+ "duckdb-core",
 ]
 
 [[package]]
-name = "dackdb-rw"
+name = "duckdb-rw"
 version = "0.1.0"
 dependencies = [
- "dackdb-core",
+ "duckdb-core",
 ]
 
 [[package]]

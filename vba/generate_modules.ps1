@@ -1,4 +1,4 @@
-# DackDb.template.txt から 3 つの VBA モジュールを生成する。
+# DuckDb.template.txt から 3 つの VBA モジュールを生成する。
 #
 # 3 つのモジュールは Lib の DLL 名と説明文だけが違う。手で 3 つ保守すると必ず
 # ズレるので 1 つのテンプレートから生成する。
@@ -19,33 +19,33 @@
 
 $ErrorActionPreference = 'Stop'
 $here = $PSScriptRoot
-$templatePath = Join-Path $here 'DackDb.template.txt'
+$templatePath = Join-Path $here 'DuckDb.template.txt'
 
 $template = [System.IO.File]::ReadAllText($templatePath, [System.Text.Encoding]::UTF8)
 $cp932 = [System.Text.Encoding]::GetEncoding(932)
 
 $tiers = @(
     @{
-        MODULE     = 'DackDbR'
-        DLL        = 'dackdb_r.dll'
+        MODULE     = 'DuckDbR'
+        DLL        = 'duckdb_r.dll'
         TITLE      = '【① 読み取り専用】'
         CANDO      = 'SELECT のみ'
         CANNOTDO   = 'INSERT/UPDATE/DELETE、CREATE/DROP/ALTER、DB 作成'
-        WRITE_WARN = "' この DLL（読み取り専用）で呼ぶとエラーになります。`r`n' 使うには DackDbRW モジュール + dackdb_rw.dll に切り替えてください。"
-        ADMIN_WARN = "' この DLL（読み取り専用）で呼ぶとエラーになります。`r`n' 使うには DackDbAdmin モジュール + dackdb_admin.dll に切り替えてください。"
+        WRITE_WARN = "' この DLL（読み取り専用）で呼ぶとエラーになります。`r`n' 使うには DuckDbRW モジュール + duckdb_rw.dll に切り替えてください。"
+        ADMIN_WARN = "' この DLL（読み取り専用）で呼ぶとエラーになります。`r`n' 使うには DuckDbAdmin モジュール + duckdb_admin.dll に切り替えてください。"
     }
     @{
-        MODULE     = 'DackDbRW'
-        DLL        = 'dackdb_rw.dll'
+        MODULE     = 'DuckDbRW'
+        DLL        = 'duckdb_rw.dll'
         TITLE      = '【② 読み書き可】'
         CANDO      = 'SELECT / INSERT / UPDATE / DELETE / トランザクション'
         CANNOTDO   = 'CREATE/DROP/ALTER などのスキーマ変更、DB 作成'
         WRITE_WARN = "' この DLL で使えます。"
-        ADMIN_WARN = "' この DLL（読み書き可）で呼ぶとエラーになります。`r`n' 使うには DackDbAdmin モジュール + dackdb_admin.dll に切り替えてください。"
+        ADMIN_WARN = "' この DLL（読み書き可）で呼ぶとエラーになります。`r`n' 使うには DuckDbAdmin モジュール + duckdb_admin.dll に切り替えてください。"
     }
     @{
-        MODULE     = 'DackDbAdmin'
-        DLL        = 'dackdb_admin.dll'
+        MODULE     = 'DuckDbAdmin'
+        DLL        = 'duckdb_admin.dll'
         TITLE      = '【③ 管理者】'
         CANDO      = 'すべて（DB 作成、テーブル作成/削除、キー設定、スキーマ出力を含む）'
         CANNOTDO   = '（制限なし）'

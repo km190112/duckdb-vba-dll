@@ -1,5 +1,5 @@
 [package]
-name = "dackdb-r"
+name = "duckdb-r"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
@@ -7,8 +7,8 @@ license.workspace = true
 description = "DuckDB VBA DLL — ① 読み取り専用"
 
 [lib]
-name = "dackdb_r"
+name = "duckdb_r"
 crate-type = ["cdylib"]
 
 [dependencies]
-dackdb-core = { workspace = true }
+duckdb-core = { workspace = true }

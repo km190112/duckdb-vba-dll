@@ -99,7 +99,7 @@ pub fn execute(level: Level, handle: i64, sql: &str) -> Result<VARIANT, String> 
         return Err(forbidden(
             level,
             "DackExecute",
-            "書き込みには dackdb_rw.dll（読み書き可）を使ってください。",
+            "書き込みには duckdb_rw.dll（読み書き可）を使ってください。",
         ));
     }
     with(handle, |s| query::execute(s, sql).map(VARIANT::i64))
@@ -119,7 +119,7 @@ pub unsafe fn execute_params(
         return Err(forbidden(
             level,
             "DackExecuteParams",
-            "書き込みには dackdb_rw.dll（読み書き可）を使ってください。",
+            "書き込みには duckdb_rw.dll（読み書き可）を使ってください。",
         ));
     }
     if params.is_null() {
@@ -147,7 +147,7 @@ pub unsafe fn append_array(
         return Err(forbidden(
             level,
             "DackAppendArray",
-            "書き込みには dackdb_rw.dll（読み書き可）を使ってください。",
+            "書き込みには duckdb_rw.dll（読み書き可）を使ってください。",
         ));
     }
     if data.is_null() {
@@ -178,7 +178,7 @@ fn transaction_stmt(level: Level, handle: i64, sql: &str, func: &str) -> Result<
         return Err(forbidden(
             level,
             func,
-            "トランザクションには dackdb_rw.dll（読み書き可）以上を使ってください。",
+            "トランザクションには duckdb_rw.dll（読み書き可）以上を使ってください。",
         ));
     }
     with(handle, |s| {
@@ -198,7 +198,7 @@ pub fn create_database(level: Level, path: &str) -> Result<VARIANT, String> {
         return Err(forbidden(
             level,
             "DackCreateDatabase",
-            "データベースの作成には dackdb_admin.dll（管理者）を使ってください。",
+            "データベースの作成には duckdb_admin.dll（管理者）を使ってください。",
         ));
     }
     let path = path.trim();
@@ -221,7 +221,7 @@ pub fn execute_ddl(level: Level, handle: i64, sql: &str) -> Result<VARIANT, Stri
         return Err(forbidden(
             level,
             "DackExecuteDDL",
-            "スキーマ変更には dackdb_admin.dll（管理者）を使ってください。",
+            "スキーマ変更には duckdb_admin.dll（管理者）を使ってください。",
         ));
     }
     with(handle, |s| query::execute_ddl(s, sql).map(VARIANT::i64))
@@ -232,7 +232,7 @@ pub fn export_schema(level: Level, handle: i64, format: &str) -> Result<VARIANT,
         return Err(forbidden(
             level,
             "DackExportSchema",
-            "スキーマ情報の出力には dackdb_admin.dll（管理者）を使ってください。",
+            "スキーマ情報の出力には duckdb_admin.dll（管理者）を使ってください。",
         ));
     }
     with(handle, |s| crate::schema::export(s, format))
@@ -243,7 +243,7 @@ pub fn checkpoint(level: Level, handle: i64) -> Result<VARIANT, String> {
         return Err(forbidden(
             level,
             "DackCheckpoint",
-            "CHECKPOINT には dackdb_admin.dll（管理者）を使ってください。",
+            "CHECKPOINT には duckdb_admin.dll（管理者）を使ってください。",
         ));
     }
     with(handle, |s| {

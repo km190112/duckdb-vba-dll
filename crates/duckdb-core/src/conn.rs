@@ -133,7 +133,7 @@ pub fn open(level: Level, path: &str, opts: OpenOptions) -> Result<i64, String> 
         return Err(format!(
             "データベースファイルが見つかりません: {path}\n\
              読み取り専用 DLL は新しいファイルを作成できません。\
-             作成するには dackdb_admin.dll の DackCreateDatabase を使ってください。"
+             作成するには duckdb_admin.dll の DackCreateDatabase を使ってください。"
         ));
     }
 
@@ -192,7 +192,7 @@ mod tests {
     use super::*;
 
     fn tmp_db(name: &str) -> std::path::PathBuf {
-        let dir = std::env::temp_dir().join("dackdb-tests");
+        let dir = std::env::temp_dir().join("duckdb-tests");
         std::fs::create_dir_all(&dir).unwrap();
         let p = dir.join(name);
         let _ = std::fs::remove_file(&p);
@@ -297,7 +297,7 @@ mod tests {
         .unwrap_err();
         assert!(err.contains("見つかりません"), "{err}");
         assert!(
-            err.contains("dackdb_admin.dll"),
+            err.contains("duckdb_admin.dll"),
             "上位 DLL への案内が無い: {err}"
         );
     }

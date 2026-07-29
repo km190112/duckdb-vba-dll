@@ -2,8 +2,8 @@
 //!
 //! # 全体像
 //!
-//! `dackdb-r` / `dackdb-rw` / `dackdb-admin` の 3 つの cdylib クレートは、
-//! いずれもこのクレートの [`export_dackdb_ffi!`] マクロに [`Level`] 定数を
+//! `duckdb-r` / `duckdb-rw` / `duckdb-admin` の 3 つの cdylib クレートは、
+//! いずれもこのクレートの [`export_duckdb_ffi!`] マクロに [`Level`] 定数を
 //! 渡すだけの薄い殻である。ロジックはすべてここにある。
 //!
 //! # 権限は 2 層で強制する
@@ -53,7 +53,7 @@ pub fn duckdb_version() -> String {
 /// `DackVersion` が返す文字列。
 pub fn version_string(level: Level) -> String {
     format!(
-        "dackdb {} / DuckDB {} / 権限: {} ({})",
+        "duckdb {} / DuckDB {} / 権限: {} ({})",
         VERSION,
         duckdb_version(),
         level.name(),

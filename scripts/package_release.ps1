@@ -16,9 +16,9 @@ $bin = Join-Path $root "target\$Config"
 $out = Join-Path $root "dist"
 
 $tiers = @(
-    @{ Id = 'r';     Dll = 'dackdb_r.dll';     Bas = 'DackDbR.bas';     Name = '読み取り専用'; Can = 'SELECT のみ' }
-    @{ Id = 'rw';    Dll = 'dackdb_rw.dll';    Bas = 'DackDbRW.bas';    Name = '読み書き可';   Can = 'SELECT / INSERT / UPDATE / DELETE' }
-    @{ Id = 'admin'; Dll = 'dackdb_admin.dll'; Bas = 'DackDbAdmin.bas'; Name = '管理者';       Can = 'すべて（DB・テーブルの作成/削除を含む）' }
+    @{ Id = 'r';     Dll = 'duckdb_r.dll';     Bas = 'DuckDbR.bas';     Name = '読み取り専用'; Can = 'SELECT のみ' }
+    @{ Id = 'rw';    Dll = 'duckdb_rw.dll';    Bas = 'DuckDbRW.bas';    Name = '読み書き可';   Can = 'SELECT / INSERT / UPDATE / DELETE' }
+    @{ Id = 'admin'; Dll = 'duckdb_admin.dll'; Bas = 'DuckDbAdmin.bas'; Name = '管理者';       Can = 'すべて（DB・テーブルの作成/削除を含む）' }
 )
 
 if (Test-Path $out) { Remove-Item $out -Recurse -Force }
@@ -43,7 +43,7 @@ foreach ($t in $tiers) {
 
     # 同梱の手順書も VBE 利用者に合わせて CP932 で書く
     $readme = @"
-dackdb v$Version  —  $($t.Name)版
+duckdb v$Version  —  $($t.Name)版
 
 このフォルダの中身
 ------------------
@@ -64,7 +64,7 @@ dackdb v$Version  —  $($t.Name)版
   3. VBE の左側で ThisWorkbook をダブルクリックし、次を貼り付けます。
 
        Private Sub Workbook_Open()
-           DackDbInit ThisWorkbook.Path & "\dll"
+           DuckDbInit ThisWorkbook.Path & "\dll"
        End Sub
 
   4. ブックを保存して開き直せば準備完了です。
@@ -78,7 +78,7 @@ dackdb v$Version  —  $($t.Name)版
     [System.IO.File]::WriteAllText(
         (Join-Path $stage 'はじめにお読みください.txt'), $readme, $cp932)
 
-    $zip = Join-Path $out "dackdb-$($t.Id)-v$Version-x64.zip"
+    $zip = Join-Path $out "duckdb-$($t.Id)-v$Version-x64.zip"
     Compress-Archive -Path "$stage\*" -DestinationPath $zip -Force
     Remove-Item $stage -Recurse -Force
 

@@ -53,7 +53,7 @@ pub unsafe fn guard(
                 "詳細不明".to_string()
             };
             let msg = format!(
-                "dackdb の内部エラー（panic）: {detail}\n\
+                "duckdb の内部エラー（panic）: {detail}\n\
                  これは DLL の不具合です。実行した SQL と合わせて報告してください。"
             );
             unsafe { write_out(out, VARIANT::bstr(&msg)) };
@@ -93,7 +93,7 @@ pub unsafe fn arg_string(p: *const u16, name: &str) -> Result<String, String> {
 /// unsafe な入口である。`unsafe extern "system" fn` にしてもエクスポートされる
 /// シンボル名と ABI は変わらないため、VBA 側の `Declare` には影響しない。
 #[macro_export]
-macro_rules! export_dackdb_ffi {
+macro_rules! export_duckdb_ffi {
     ($level:expr) => {
         /// この DLL の権限レベル。
         const DACK_LEVEL: $crate::Level = $level;

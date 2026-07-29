@@ -7,9 +7,9 @@
 
 | DLL | 権限 | できること |
 |---|---|---|
-| `dackdb_r.dll` | ① 読み取り専用 | SELECT のみ |
-| `dackdb_rw.dll` | ② 読み書き可 | ① + INSERT / UPDATE / DELETE / トランザクション |
-| `dackdb_admin.dll` | ③ 管理者 | ② + DB 作成、CREATE/DROP/ALTER、キー設定、スキーマ出力 |
+| `duckdb_r.dll` | ① 読み取り専用 | SELECT のみ |
+| `duckdb_rw.dll` | ② 読み書き可 | ① + INSERT / UPDATE / DELETE / トランザクション |
+| `duckdb_admin.dll` | ③ 管理者 | ② + DB 作成、CREATE/DROP/ALTER、キー設定、スキーマ出力 |
 
 **64bit Excel 専用**です。DLL 1 ファイルで完結します（DuckDB を静的リンク済み・約 25MB）。
 
@@ -106,16 +106,16 @@ UTF-8 デコードする必要があります。
 
 ```
 配布物の構成:
-  dll\dackdb_r.dll        ← 利用者に応じて 1 つだけ配る
-  vba\DackDbR.bas         ← 対応するモジュールをインポート
+  dll\duckdb_r.dll        ← 利用者に応じて 1 つだけ配る
+  vba\DuckDbR.bas         ← 対応するモジュールをインポート
 ```
 
-1. VBE で「ファイル > ファイルのインポート」から `DackDbR.bas` を読み込む
+1. VBE で「ファイル > ファイルのインポート」から `DuckDbR.bas` を読み込む
 2. 起動時に一度だけ初期化する
 
 ```vba
 Private Sub Workbook_Open()
-    DackDbInit ThisWorkbook.Path & "\dll"
+    DuckDbInit ThisWorkbook.Path & "\dll"
 End Sub
 ```
 
@@ -181,7 +181,7 @@ DuckDB の Appender API を使うため、INSERT 文の反復より 1〜2 桁高
 
 | VBA 関数 | ① | ② | ③ | 説明 |
 |---|:-:|:-:|:-:|---|
-| `DackDbInit(dllFolder)` | ✓ | ✓ | ✓ | DLL を読み込む（起動時に一度） |
+| `DuckDbInit(dllFolder)` | ✓ | ✓ | ✓ | DLL を読み込む（起動時に一度） |
 | `DackVersion()` | ✓ | ✓ | ✓ | DLL / DuckDB の版数と権限レベル |
 | `DackCapabilities()` | ✓ | ✓ | ✓ | この DLL で使える関数の一覧 |
 | `OpenDb(path)` | ✓ | ✓ | ✓ | 接続を開きハンドルを返す |
@@ -287,7 +287,7 @@ cargo build --workspace --release
 ```
 
 初回は DuckDB のソースをコンパイルするため 3 分ほどかかります。
-成果物は `target/release/dackdb_{r,rw,admin}.dll`。
+成果物は `target/release/duckdb_{r,rw,admin}.dll`。
 
 ### テスト
 
@@ -328,7 +328,7 @@ pwsh -File vba/generate_modules.ps1
 ### 構成
 
 ```
-crates/dackdb-core/src/
+crates/duckdb-core/src/
   oleaut.rs    VARIANT / SAFEARRAY の手書き Win32 バインディング
   variant.rs   出力: 2 次元 SAFEARRAY の組み立て（列優先の並べ替え）
   value.rs     出力: DuckDB の値 → VARIANT
@@ -340,8 +340,8 @@ crates/dackdb-core/src/
   query.rs     クエリ実行
   schema.rs    スキーマ出力
   api.rs       公開 API の実装本体
-  ffi.rs       export_dackdb_ffi! マクロ（catch_unwind を含む）
-crates/dackdb-{r,rw,admin}/src/lib.rs   マクロを 1 行呼ぶだけ
+  ffi.rs       export_duckdb_ffi! マクロ（catch_unwind を含む）
+crates/duckdb-{r,rw,admin}/src/lib.rs   マクロを 1 行呼ぶだけ
 ```
 
 #### 設計上の注意点
@@ -350,12 +350,12 @@ crates/dackdb-{r,rw,admin}/src/lib.rs   マクロを 1 行呼ぶだけ
   捕まえて VBA にエラーを返す設計です。abort にすると Excel がプロセスごと落ちます。
 - **権限を Cargo の feature で切り替えないこと。** ワークスペース一括ビルド時に
   feature 統合が起きて 3 つの DLL すべてが管理者権限になります。
-  レベルは `export_dackdb_ffi!` のマクロ引数として渡しています。
+  レベルは `export_duckdb_ffi!` のマクロ引数として渡しています。
 - **`windows` クレートは使っていません。** `VARIANT` に `Drop` があると、VBA 所有の
   メモリに書き込む本用途では二重解放の危険があるためです。詳細は `oleaut.rs` 冒頭。
 - **`vba/*.bas` は Shift-JIS (CP932) です。** VBE のインポートがそう読むためで、
   GitHub の Web 画面では日本語コメントが文字化けして見えます。編集するのは
-  UTF-8 の `vba/DackDb.template.txt` のほうです。テンプレートの拡張子が `.txt`
+  UTF-8 の `vba/DuckDb.template.txt` のほうです。テンプレートの拡張子が `.txt`
   なのは、`{{MODULE}}` などの未置換プレースホルダを含むため VBE にインポートすると
   「オブジェクト名が不正です」になるからです。VBE に入れるのは生成物の 3 本だけです。
 

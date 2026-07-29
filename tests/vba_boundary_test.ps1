@@ -41,9 +41,9 @@ function Assert-Equal {
 # 同じ関数名を持つ 3 つの DLL を同一プロセスで扱うため、クラスを分ける。
 
 $tiers = @(
-    @{ Name = 'R';     Dll = 'dackdb_r.dll';     Class = 'DackR' }
-    @{ Name = 'RW';    Dll = 'dackdb_rw.dll';    Class = 'DackRW' }
-    @{ Name = 'ADMIN'; Dll = 'dackdb_admin.dll'; Class = 'DackAdmin' }
+    @{ Name = 'R';     Dll = 'duckdb_r.dll';     Class = 'DackR' }
+    @{ Name = 'RW';    Dll = 'duckdb_rw.dll';    Class = 'DackRW' }
+    @{ Name = 'ADMIN'; Dll = 'duckdb_admin.dll'; Class = 'DackAdmin' }
 )
 
 foreach ($t in $tiers) {
@@ -82,7 +82,7 @@ public static class $($t.Class) {
 function Str-Ptr([string]$s) { [Runtime.InteropServices.Marshal]::StringToHGlobalUni($s) }
 function Free-Ptr([IntPtr]$p) { [Runtime.InteropServices.Marshal]::FreeHGlobal($p) }
 
-$dbPath = Join-Path $env:TEMP "dackdb-vba-test.db"
+$dbPath = Join-Path $env:TEMP "duckdb-vba-test.db"
 if (Test-Path $dbPath) { Remove-Item $dbPath -Force }
 
 $JP = "テスト漢字" + [char]::ConvertFromUtf32(0x20BB7) + [char]::ConvertFromUtf32(0x1F600)
@@ -185,7 +185,7 @@ $p = Str-Ptr "INSERT INTO 売上 VALUES (9,'x',1,1,NULL,true)"
 $rc = [DackR]::DackExecute($hR, $p, [ref]$r)
 Free-Ptr $p
 Assert-Equal -403 $rc "読み取り DLL の DackExecute が DACK_E_FORBIDDEN"
-Assert-That ($r -like '*dackdb_rw.dll*') "上位 DLL への案内が入っている" "実際: $r"
+Assert-That ($r -like '*duckdb_rw.dll*') "上位 DLL への案内が入っている" "実際: $r"
 
 $p = Str-Ptr "DROP TABLE 売上"
 $rc = [DackR]::DackExecuteDDL($hR, $p, [ref]$r)
@@ -217,7 +217,7 @@ $p = Str-Ptr "CREATE TABLE t2 (a INTEGER)"
 $rc = [DackRW]::DackExecuteDDL($hRW, $p, [ref]$r)
 Free-Ptr $p
 Assert-Equal -403 $rc "読み書き DLL の DackExecuteDDL が拒否される"
-Assert-That ($r -like '*dackdb_admin.dll*') "管理者 DLL への案内が入っている" "実際: $r"
+Assert-That ($r -like '*duckdb_admin.dll*') "管理者 DLL への案内が入っている" "実際: $r"
 
 [void][DackRW]::DackClose($hRW, [ref]$r)
 
@@ -300,7 +300,7 @@ $p = Str-Ptr "DELETE FROM 売上 WHERE id = ?"
 $rc = [DackR]::DackExecuteParams(0L, $p, [ref]$prm, [ref]$r)
 Free-Ptr $p
 Assert-Equal -403 $rc "読み取り DLL の DackExecuteParams が拒否される"
-Assert-That ($r -like '*dackdb_rw.dll*') "上位 DLL への案内が入っている" "実際: $r"
+Assert-That ($r -like '*duckdb_rw.dll*') "上位 DLL への案内が入っている" "実際: $r"
 
 Write-Host "`n=== 12. 一括投入（Appender）===" -ForegroundColor Cyan
 $p = Str-Ptr "CREATE TABLE 投入先 (id INTEGER, 名前 VARCHAR, 金額 BIGINT)"
@@ -349,7 +349,7 @@ $p = Str-Ptr "投入先"
 $rc = [DackR]::DackAppendArray(0L, $p, [ref]$boxed, [ref]$r)
 Free-Ptr $p
 Assert-Equal -403 $rc "読み取り DLL の DackAppendArray が拒否される"
-Assert-That ($r -like '*dackdb_rw.dll*') "上位 DLL への案内が入っている" "実際: $r"
+Assert-That ($r -like '*duckdb_rw.dll*') "上位 DLL への案内が入っている" "実際: $r"
 
 Write-Host "`n=== 13. スキーマ出力（管理者のみ）===" -ForegroundColor Cyan
 $p = Str-Ptr "ddl"
