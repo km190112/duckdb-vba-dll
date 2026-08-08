@@ -1,0 +1,13 @@
+# ワークフローのアクションを SHA で固定しているため、更新は自動で拾わせる。
+# 固定しただけで放置すると、脆弱性が直った版に上がらないまま古い SHA に
+# 貼り付いてしまう。固定と自動更新はセットで運用する。
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: monthly
+    commit-message:
+      prefix: "CI"
+    labels:
+      - dependencies
