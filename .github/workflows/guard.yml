@@ -1,0 +1,48 @@
+name: Guard
+
+# 社内情報の混入検査だけを ci.yml から切り出したもの。
+#
+# なぜ分けるか: 検査は「追跡ファイル全件」が対象で、どの変更でも必ず走らせたい。
+# 一方 ci.yml の Rust ビルドは DuckDB をソースからビルドするため 30 分以上かかる。
+# 同じワークフローに置くと、README を 1 行直すだけで 30 分ぶんの分数を払うことになる。
+# 分ければ ci.yml 側に paths フィルタを効かせられる。
+#
+# なぜ ubuntu にしないか: check_internal_info.ps1 は UTF-8 と CP932 の両方の解釈で
+# 照合する。Linux の .NET は既定で CP932 を持たず、スクリプトの try/catch が
+# $cp932 = $null に落として CP932 側の検査だけを静かに飛ばす。エラーも出ないので
+# 「検査したつもりで見ていない」状態になる。倍率 x2 を払ってでも windows で回す。
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+# ここに paths / paths-ignore を書かないこと。
+# 全ファイルが検査対象なので、絞った瞬間にそこが恒久的な検査の穴になる。
+
+concurrency:
+  group: guard-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  internal-info:
+    runs-on: windows-latest
+
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+
+      # public リポジトリなので、社内固有情報が混入したら即座に世界へ出る。
+      # 2026-08-08 に別リポジトリで、社内サーバ名と機密区分の表記を含む UNC パスが
+      # 約 3.5 か月 public に出ていた事故があった。人の目視に頼らず機械的に止める。
+      #
+      # 検査ロジックは scripts/check_internal_info.ps1 に置いてある。
+      # パターンを文字コードから組み立てているため、このスクリプト自身も
+      # 走査対象にできる (除外すればそこが恒久的な検査の穴になる)。
+      - name: 社内情報が混入していないか
+        shell: pwsh
+        run: ./scripts/check_internal_info.ps1
